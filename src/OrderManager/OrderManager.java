@@ -22,7 +22,7 @@ public class OrderManager {
 
 	private HashMap<Integer,Order> orders=new HashMap<Integer,Order>(); //debugger will do this line as it gives state to the object
 	//currently recording the number of new order messages we get. TODO why? use it for more?
-    private int id=0; //debugger will do this line as it gives state to the object
+    private long id=0; //debugger will do this line as it gives state to the object
 
     private static LiveMarketData liveMarketData;
     private Socket[] orderRouters;
@@ -249,7 +249,7 @@ public class OrderManager {
 
         // Create the new order and add to the order array
         Order order = new Order(clientId, clientOrderId, nos.instrument, nos.size);
-        orders.put(id,order);
+        orders.put((int) id,order);
 
         // Send a message to the client with 39=A;
         // OrdStatus is Fix 39, 'A' is 'Pending New'
@@ -266,12 +266,12 @@ public class OrderManager {
     /*
         Sends a new order to the trader
      */
-    private void sendOrderToTrader(int id,Order o,Object method) throws IOException{
+    private void sendOrderToTrader(long id, Order o, Object method) throws IOException{
 
         // Write the order date to the trader stream
         ObjectOutputStream ost=new ObjectOutputStream(trader.getOutputStream());
         ost.writeObject(method);
-        ost.writeInt(id);
+        ost.writeLong(id);
         ost.writeObject(o);
         ost.flush();
     }
@@ -296,9 +296,9 @@ public class OrderManager {
 
         ObjectOutputStream os=new ObjectOutputStream(orderRouters[minIndex].getOutputStream());
         os.writeObject(Router.api.routeOrder);
-        os.writeInt(o.id);
+        os.writeLong(o.id);
         os.writeInt(sliceId);
-        os.writeInt(o.sizeRemaining());
+        os.writeLong(o.sizeRemaining());
         os.writeObject(o.instrument);
         os.flush();
     }
@@ -327,7 +327,7 @@ public class OrderManager {
 
 		// If not then the order must be new
 		o.OrdStatus='0';
-		ObjectOutputStream os=new ObjectOutputStream(clients[o.clientid].getOutputStream());
+		ObjectOutputStream os=new ObjectOutputStream(clients[(int) o.clientid].getOutputStream());
     
 		// Write acknowledgement to the client
 		os.writeObject("11="+o.clientOrderID+";35=A;39=0");
@@ -363,7 +363,7 @@ public class OrderManager {
 		Order slice=o.slices.get(sliceId);
 
 		internalCross(id,slice);
-		int sizeRemaining=o.slices.get(sliceId).sizeRemaining();
+		long sizeRemaining=o.slices.get(sliceId).sizeRemaining();
 		if(sizeRemaining>0){
 			routeOrder(id,sliceId,sizeRemaining,slice);
 		}
@@ -387,7 +387,7 @@ public class OrderManager {
             }
 
             //TODO add support here and in Order for limit orders
-            int sizeBefore=o.sizeRemaining();
+            long sizeBefore=o.sizeRemaining();
             o.cross(matchingOrder);
 
             // If size has changed, send the order to the trader
@@ -401,7 +401,7 @@ public class OrderManager {
 
 
     // Router request logic
-    private void routeOrder(int id,int sliceId,int size,Order order) throws IOException{
+    private void routeOrder(int id, int sliceId, long size, Order order) throws IOException{
         ObjectOutputStream os;
 
 	    // Iterate over router sockets
@@ -413,7 +413,7 @@ public class OrderManager {
             os.writeInt(id);
             os.writeInt(sliceId);
             os.writeObject(order.instrument);
-            os.writeInt(order.sizeRemaining());
+            os.writeLong(order.sizeRemaining());
             os.flush();
         }
 
