@@ -22,6 +22,11 @@ public class SampleRouter extends Thread implements Router
 
 	private int port;
 
+    ObjectInputStream is;
+    ObjectOutputStream os;
+
+
+
 	//SampleRouter Contructor
 	public SampleRouter(String name,int port)
     {
@@ -29,8 +34,7 @@ public class SampleRouter extends Thread implements Router
 		this.port=port;
 	}
 
-	ObjectInputStream is;
-	ObjectOutputStream os;
+
 
 	//Called when thread is started
 	public void run()
@@ -44,13 +48,28 @@ public class SampleRouter extends Thread implements Router
             {
 				if(0<omConn.getInputStream().available())
 				{
-					is=new ObjectInputStream(omConn.getInputStream());
+					is = new ObjectInputStream(omConn.getInputStream());
+
 					Router.api methodName=(Router.api)is.readObject();
+
 					System.out.println("Order Router recieved method call for:"+methodName);
+
 					switch(methodName)
                     {
-						case routeOrder:routeOrder(is.readInt(),is.readInt(),is.readInt(),(Instrument)is.readObject());break;
-						case priceAtSize:priceAtSize(is.readInt(),is.readInt(),(Instrument)is.readObject(),is.readInt());break;
+						case routeOrder:
+						    routeOrder(is.readInt(),
+                                       is.readInt(),
+                                       is.readInt(),
+                                       (Instrument)is.readObject());
+						    break;
+
+
+						case priceAtSize:
+						    priceAtSize(is.readInt(),
+                                        is.readInt(),
+                                        (Instrument)is.readObject(),
+                                        is.readInt());
+						    break;
 					}
 				}
 				else
@@ -67,13 +86,17 @@ public class SampleRouter extends Thread implements Router
 	}
 
 
+	/*
+	* Following functions are found in the interface.
+	*/
 	@Override
 	public void routeOrder(int id,
                            int sliceId,
                            int size,
                            Instrument i) throws IOException, InterruptedException
-    { //MockI.show(""+order);
-		int fillSize=RANDOM_NUM_GENERATOR.nextInt(size);
+    {
+        //MockI.show(""+order);
+		int fillSize = RANDOM_NUM_GENERATOR.nextInt(size);
 
 		//TODO have this similar to the market price of the instrument
 		double fillPrice=199*RANDOM_NUM_GENERATOR.nextDouble();
@@ -81,17 +104,11 @@ public class SampleRouter extends Thread implements Router
 		Thread.sleep(42);
 
 		os = new ObjectOutputStream(omConn.getOutputStream());
-
 		os.writeObject("newFill");
-
 		os.writeInt(id);
-
 		os.writeInt(sliceId);
-
 		os.writeInt(fillSize);
-
 		os.writeDouble(fillPrice);
-
 		os.flush();
 	}
 
