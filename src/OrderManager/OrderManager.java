@@ -30,38 +30,17 @@ public class OrderManager {
 	private Socket trader;
 
 
-	//TODO - fix this
-	private Socket connect(InetSocketAddress location) throws InterruptedException{
-		boolean connected=false;
-		int tryCounter=0;
-		while(!connected&&tryCounter<600){
-			try{
-				Socket s=new Socket(location.getHostName(),location.getPort());
-				s.setKeepAlive(true);
-				return s;
-			}catch (IOException e) {
-				Thread.sleep(1000);
-				tryCounter++;
-			}
-		}
-		System.out.println("Failed to connect to "+location.toString());
-		return null;
-	}
+    // Constructor
+    public OrderManager(InetSocketAddress[] orderRouters, InetSocketAddress[] clients,InetSocketAddress trader,LiveMarketData liveMarketData)throws InterruptedException, IOException, ClassNotFoundException{
 
-
-	//@param args the command line arguments
-    // Contains the main order manager logic
-	public OrderManager(InetSocketAddress[] orderRouters, InetSocketAddress[] clients,InetSocketAddress trader,LiveMarketData liveMarketData)throws InterruptedException, IOException, ClassNotFoundException{
-
-	    // Set up the order manager
+        // Set up the order manager
         setup(orderRouters, clients, trader, liveMarketData);
 
-		// Start doing the main logic
-		mainLogic();
-	}
+        // Start doing the main logic
+        mainLogic();
+    }
 
-
-	private void setup(InetSocketAddress[] orderRouters, InetSocketAddress[] clients,InetSocketAddress trader,LiveMarketData liveMarketData) throws InterruptedException {
+    private void setup(InetSocketAddress[] orderRouters, InetSocketAddress[] clients,InetSocketAddress trader,LiveMarketData liveMarketData) throws InterruptedException {
         // Set up instance variables
         this.liveMarketData=liveMarketData;
         this.trader=connect(trader);
@@ -81,6 +60,23 @@ public class OrderManager {
         }
     }
 
+    //TODO - fix this
+	private Socket connect(InetSocketAddress location) throws InterruptedException{
+		boolean connected=false;
+		int tryCounter=0;
+		while(!connected&&tryCounter<600){
+			try{
+				Socket s=new Socket(location.getHostName(),location.getPort());
+				s.setKeepAlive(true);
+				return s;
+			}catch (IOException e) {
+				Thread.sleep(1000);
+				tryCounter++;
+			}
+		}
+		System.out.println("Failed to connect to "+location.toString());
+		return null;
+	}
 
     /*
         Contains the main logic for the order manager
@@ -101,11 +97,10 @@ public class OrderManager {
         }
     }
 
-
     /*
         Checks the messages for all clients
         Creates a new order if order requests received.
-     */
+    */
     private void checkClients(){
 	    int clientId;
 	    Socket client;
@@ -142,13 +137,45 @@ public class OrderManager {
         }
     }
 
+    /*
+        Deals with new order requests from the client
+    */
+    private void newOrder(int clientId, int clientOrderId, NewOrderSingle nos) throws IOException{
+
+
+        // Create the new order and add to the order array
+        Order order = new Order(clientId, clientOrderId, nos.instrument, nos.size, nos.side);
+        orders.put(id,order);
+
+        // Send a message to the client with 39=A;
+        // OrdStatus is Fix 39, 'A' is 'Pending New'
+        //TODO - add a fix code for buy/sell
+        ObjectOutputStream os=new ObjectOutputStream(clients[clientId].getOutputStream());
+        os.writeObject("11="+clientOrderId+";35=A;39=A;");
+        os.flush();
+
+        // Send this order to the trading screen
+        sendOrderToTrader(id,orders.get(id),TradeScreen.api.newOrder);
+
+        id++;
+    }
+
+    /*
+        Sends a new order to the trader through an output stream
+    */
+    private void sendOrderToTrader(int id,Order o,Object method) throws IOException{
+
+        // Write the order date to the trader stream
+        ObjectOutputStream ost=new ObjectOutputStream(trader.getOutputStream());
+        ost.writeObject(method);
+        ost.writeInt(id);
+        ost.writeObject(o);
+        ost.flush();
+    }
 
     /*
         Checks the messages for all routers
-
-
-
-     */
+    */
     private void checkRouters(){
         int routerId;
         Socket router;
@@ -156,7 +183,7 @@ public class OrderManager {
 
 
         // Iterating over each router
-        for(routerId=0;routerId<this.orderRouters.length;routerId++){ //check if we have data on any of the sockets
+        for(routerId=0;routerId<this.orderRouters.length;routerId++){
             router=this.orderRouters[routerId];
 
             try {
@@ -198,16 +225,52 @@ public class OrderManager {
                 e.printStackTrace();
             }
         }
+    }
 
+    /*
+        Sends a order slice to the router and best price
+    */
+    private void reallyRouteOrder(int sliceId,Order o) throws IOException{
 
+        //TODO - this assumes we are buying rather than selling
+        // Iterate over prices and find minimum
+        int minIndex=0;
+        double min=o.bestPrices[0];
+        for(int i=1;i<o.bestPrices.length;i++){
+            if(min>o.bestPrices[i]){
+                minIndex=i;
+                min=o.bestPrices[i];
+            }
+        }
+
+        //TODO - add buy or sell to order message
+        // Route to the minimum
+        ObjectOutputStream os=new ObjectOutputStream(orderRouters[minIndex].getOutputStream());
+        os.writeObject(Router.api.routeOrder);
+        os.writeInt((int) o.id);
+        os.writeInt(sliceId);
+        os.writeInt((int) o.sizeRemaining());
+        os.writeObject(o.instrument);
+        os.flush();
+    }
+
+    /*
+        Creates a new fill order for a order slice
+    */
+    private void newFill(int id,int sliceId,int size,double price) throws IOException{
+        Order o=orders.get(id);
+        o.slices.get(sliceId).createFill(size, price);
+
+        // If there is nothing left write to database
+        if(o.sizeRemaining()==0){
+            Database.write(o);
+        }
+        sendOrderToTrader(id, o, TradeScreen.api.fill);
     }
 
     /*
         Checks the messages for the trader
-
-
-
-     */
+    */
     private void checkTrader(){
         ObjectInputStream is;
 
@@ -238,84 +301,9 @@ public class OrderManager {
         }
     }
 
-
-
-    // Client request logic
     /*
-        Deals with new order requests from the client
-     */
-    private void newOrder(int clientId, int clientOrderId, NewOrderSingle nos) throws IOException{
-
-
-        // Create the new order and add to the order array
-        Order order = new Order(clientId, clientOrderId, nos.instrument, nos.size, nos.side);
-        orders.put(id,order);
-
-        // Send a message to the client with 39=A;
-        // OrdStatus is Fix 39, 'A' is 'Pending New'
-        ObjectOutputStream os=new ObjectOutputStream(clients[clientId].getOutputStream());
-        os.writeObject("11="+clientOrderId+";35=A;39=A;");
-        os.flush();
-
-        // Send this order to the trading screen
-        sendOrderToTrader(id,orders.get(id),TradeScreen.api.newOrder);
-
-        id++;
-    }
-
-    /*
-        Sends a new order to the trader
-     */
-    private void sendOrderToTrader(int id,Order o,Object method) throws IOException{
-
-        // Write the order date to the trader stream
-        ObjectOutputStream ost=new ObjectOutputStream(trader.getOutputStream());
-        ost.writeObject(method);
-        ost.writeInt(id);
-        ost.writeObject(o);
-        ost.flush();
-    }
-
-
-    //Router request logic
-    /*
-
-     */
-    private void reallyRouteOrder(int sliceId,Order o) throws IOException{
-
-        //TODO this assumes we are buying rather than selling
-        int minIndex=0;
-        double min=o.bestPrices[0];
-        for(int i=1;i<o.bestPrices.length;i++){
-            if(min>o.bestPrices[i]){
-                minIndex=i;
-                min=o.bestPrices[i];
-            }
-        }
-
-
-        ObjectOutputStream os=new ObjectOutputStream(orderRouters[minIndex].getOutputStream());
-        os.writeObject(Router.api.routeOrder);
-        os.writeInt((int) o.id);
-        os.writeInt(sliceId);
-        os.writeInt((int) o.sizeRemaining());
-        os.writeObject(o.instrument);
-        os.flush();
-    }
-    private void newFill(int id,int sliceId,int size,double price) throws IOException{
-        Order o=orders.get(id);
-        o.slices.get(sliceId).createFill(size, price);
-        if(o.sizeRemaining()==0){
-            Database.write(o);
-        }
-        sendOrderToTrader(id, o, TradeScreen.api.fill);
-    }
-
-
-    // Trader request logic
-    /*
-        If the trader accepts the new order
-     */
+        If the trader accepts the new order, prices the order
+    */
 	public void acceptOrder(int id) throws IOException{
 		Order o=orders.get(id);
 
@@ -337,8 +325,12 @@ public class OrderManager {
 		price(id,o);
 	}
 
+    /*
+        Updates the live market data
+    */
     private void price(int id,Order o) throws IOException{
 
+        //TODO - Why do we send back to the trader with the api.price?
 	    // Set the market price and send the order to the trader
         liveMarketData.setPrice(o);
         sendOrderToTrader(id, o, TradeScreen.api.price);
@@ -346,47 +338,61 @@ public class OrderManager {
 
     /*
         If the trader requested a slice for the new order
-     */
+    */
 	public void sliceOrder(int id,int sliceSize) throws IOException{
 		Order o=orders.get(id);
 
-
-		//Order has a list of slices, and a list of fills, each slice is a childorder and each fill is associated with either a child order or the original order
+		//Order has a list of slices, and a list of fills, each slice is a child order and each fill is associated with either a child order or the original order
 		//Make sure that the slice size is valid (must be less than the remaining orders)
         if(sliceSize>o.sizeRemaining()-o.sliceSizes()){
 			System.out.println("error sliceSize is bigger than remaining size to be filled on the order");
 			return;
 		}
 
-		// If valid slice, slice the order
+		// If valid slice, create a new slice
 		int sliceId=o.newSlice(sliceSize);
 		Order slice=o.slices.get(sliceId);
 
+		// Do internal cross with slice
+        // TODO - what does the internal cross do?
 		internalCross(id,slice);
 		int sizeRemaining= (int) o.slices.get(sliceId).sizeRemaining();
+
+		// If the internal cross does not satisfy then route to exchange
 		if(sizeRemaining>0){
 			routeOrder(id,sliceId,sizeRemaining,slice);
 		}
 	}
 
+
+    /*
+        Performs an internal cross, if theres 2 matching buy/sell then match them
+
+        TODO - what is this?
+
+     */
     private void internalCross(int id, Order o) throws IOException{
 
-
 	    // Iterating over all the orders
-        for(Map.Entry<Integer, Order>entry:orders.entrySet()){
+        for(Map.Entry<Integer, Order>entry:orders.entrySet()) {
 
-            // Skip the parent order
-            if(entry.getKey().intValue()==id){
+            // Don't include the order we're trying to cross
+            if (entry.getKey().intValue() == id) {
                 continue;
             }
 
-            // Skip orders with same instrument and market price
-            Order matchingOrder=entry.getValue();
-            if(!(matchingOrder.instrument.equals(o.instrument)&&matchingOrder.initialMarketPrice==o.initialMarketPrice)){
+            Order matchingOrder = entry.getValue();
+
+            // Don't include orders that are a different instrument or different market price (must match)
+            // TODO - fix this statement
+            if (!(matchingOrder.instrument.equals(o.instrument))) {
+                continue;
+            } else if (!(matchingOrder.initialMarketPrice == o.initialMarketPrice)){
                 continue;
             }
 
             //TODO add support here and in Order for limit orders
+            // If everything passed, cross the orders
             int sizeBefore= (int) o.sizeRemaining();
             o.cross(matchingOrder);
 
@@ -402,6 +408,8 @@ public class OrderManager {
 
     // Router request logic
     private void routeOrder(int id,int sliceId,int size,Order order) throws IOException{
+
+        // TODO - why reallyRouteOrder vs routeOrder?
         ObjectOutputStream os;
 
 	    // Iterate over router sockets
@@ -422,12 +430,12 @@ public class OrderManager {
         order.bestPriceCount=0;
     }
 
-
+    //TODO - implement this
 	private void cancelOrder(){
 		
 	}
 
-
+    //TODO - implement this
 	private void sendCancel(Order order,Router orderRouter){
 		//orderRouter.sendCancel(order);
 		//order.orderRouter.writeObject(order);
