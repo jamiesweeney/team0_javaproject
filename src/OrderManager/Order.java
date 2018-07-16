@@ -6,24 +6,54 @@ import java.util.ArrayList;
 import Ref.Instrument;
 
 public class Order implements Serializable {
-    public long id;
-    long orderRouter;
+
+    // Instance variables
+    long clientid;
     public long clientOrderID;
+    public Instrument instrument;
     long size;
+    int side;
+    ArrayList<Fill> fills;
+    ArrayList<Order> slices;
+
+    public long id;
     double[] bestPrices;
     long bestPriceCount;
+    //    long orderRouter; TODO - Do we need this?
+    //    Status state;
 
+    public double initialMarketPrice;
+    char OrdStatus = 'A'; //OrdStatus is Fix 39, 'A' is 'Pending New'
+
+
+    // Constructor
+    public Order(long clientId, long ClientOrderID, Instrument instrument, int size, int side) {
+        this.clientOrderID = ClientOrderID;
+        this.size = size;
+        this.clientid = clientId;
+        this.instrument = instrument;
+        this.side=side;
+        fills = new ArrayList<Fill>();
+        slices = new ArrayList<Order>();
+    }
+
+
+    // Returns the total of slice sizes i.e total size places
     public int sliceSizes() {
         int totalSizeOfSlices = 0;
-        for (Order c : slices) totalSizeOfSlices += c.size;
+        for (Order c : slices){
+            totalSizeOfSlices += c.size;
+        }
         return totalSizeOfSlices;
     }
 
+    // Adds a new to the slice array, returns the slice index
     public int newSlice(int sliceSize) {
         slices.add(new Order(id, clientOrderID, instrument, sliceSize, side));
         return slices.size() - 1;
     }
 
+    // Returns the total amount of the order filled
     public long sizeFilled() {
         int filledSoFar = 0;
         for (Fill f : fills) {
@@ -35,19 +65,13 @@ public class Order implements Serializable {
         return filledSoFar;
     }
 
+    // Returns the size left to fill
     public long sizeRemaining() {
         return size - sizeFilled();
     }
 
-    long clientid;
-    public Instrument instrument;
-    int side;
-    public double initialMarketPrice;
-    ArrayList<Order> slices;
-    ArrayList<Fill> fills;
-    char OrdStatus = 'A'; //OrdStatus is Fix 39, 'A' is 'Pending New'
 
-    //Status state;
+
     float price() {
         //TODO this is buggy as it doesn't take account of slices. Let them fix it
         float sum = 0;
@@ -57,6 +81,7 @@ public class Order implements Serializable {
         return sum / fills.size();
     }
 
+    // Makes a new fill
     void createFill(long size, double price) {
         fills.add(new Fill(size, price));
         if (sizeRemaining() == 0) {
@@ -66,6 +91,7 @@ public class Order implements Serializable {
         }
     }
 
+    //
     void cross(Order matchingOrder) {
         //pair slices first and then parent
         for (Order slice : slices) {
@@ -126,18 +152,10 @@ public class Order implements Serializable {
         }
     }
 
+
+    // TODO - add functionality
     void cancel() {
         //state=cancelled
-    }
-
-    public Order(long clientId, long ClientOrderID, Instrument instrument, int size, int side) {
-        this.clientOrderID = ClientOrderID;
-        this.size = size;
-        this.clientid = clientId;
-        this.instrument = instrument;
-        this.side=side;
-        fills = new ArrayList<Fill>();
-        slices = new ArrayList<Order>();
     }
 }
 

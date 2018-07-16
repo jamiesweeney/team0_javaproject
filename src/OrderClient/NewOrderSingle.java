@@ -5,10 +5,13 @@ import java.io.Serializable;
 import Ref.Instrument;
 
 public class NewOrderSingle implements Serializable{
+
+	// Instance variables
 	public int size;
 	public float price;
 	public Instrument instrument;
 	public int side;
+
 	public NewOrderSingle(int size,float price,Instrument instrument, int side){
 		this.size=size;
 		this.price=price;
