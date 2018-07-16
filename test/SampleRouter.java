@@ -3,6 +3,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.Random;
+import java.util.logging.Logger;
 
 import javax.net.ServerSocketFactory;
 
@@ -12,6 +13,8 @@ import Ref.Ric;
 
 public class SampleRouter extends Thread implements Router
 {
+    private Logger log = Logger.getLogger(SampleRouter.class.getName());
+
     private static final Random RANDOM_NUM_GENERATOR = new Random();
 
 	private static final Instrument[] INSTRUMENTS = {new Instrument(new Ric("VOD.L")),
@@ -26,9 +29,8 @@ public class SampleRouter extends Thread implements Router
     ObjectOutputStream os;
 
 
-
-	//SampleRouter Contructor
-	public SampleRouter(String name,int port)
+	//SampleRouter Constructor
+	public SampleRouter(String name, int port)
     {
 		this.setName(name);
 		this.port=port;
@@ -42,7 +44,7 @@ public class SampleRouter extends Thread implements Router
 		//OrderManager will connect to us
 		try
         {
-			omConn=ServerSocketFactory.getDefault().createServerSocket(port).accept();
+			omConn = ServerSocketFactory.getDefault().createServerSocket(port).accept();
 
 			while(true)
             {
@@ -50,9 +52,9 @@ public class SampleRouter extends Thread implements Router
 				{
 					is = new ObjectInputStream(omConn.getInputStream());
 
-					Router.api methodName=(Router.api)is.readObject();
+					Router.api methodName = (Router.api)is.readObject();
 
-					System.out.println("Order Router recieved method call for:"+methodName);
+					log.info("Order Router recieved method call for:" + methodName);
 
 					switch(methodName)
                     {
@@ -80,7 +82,7 @@ public class SampleRouter extends Thread implements Router
 		}
 		catch (IOException | ClassNotFoundException | InterruptedException e)
         {
-			// TODO Auto-generated catch block
+            log.info("Exception caught: ");
 			e.printStackTrace();
 		}
 	}

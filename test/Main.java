@@ -10,7 +10,8 @@ public class Main
 {
 	public static void main(String[] args) throws IOException
 	{
-		System.out.println("TEST: this program tests ordermanager");
+		Logger log = Logger.getLogger(Main.class.getName());
+		log.info("TEST: this program tests ordermanager");
 
 		//start sample clients
 		new MockClient("Client 1",2000).start();
@@ -19,8 +20,9 @@ public class Main
 		//start sample routers
 		new SampleRouter("Router LSE",2010).start();
 		new SampleRouter("Router BATE",2011).start();
-	
+
 		new Trader("Trader James",2020).start();
+
 		//start order manager
 		InetSocketAddress[] clients = {new InetSocketAddress("localhost",2000),
 				                       new InetSocketAddress("localhost",2001)};

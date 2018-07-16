@@ -5,7 +5,7 @@ import Ref.Instrument;
 
 public interface Router
 {
-	public enum api{routeOrder,sendCancel,priceAtSize};
+	public enum api{routeOrder, sendCancel, priceAtSize};
 
 	public void routeOrder(int id,
 						   int sliceId,
