@@ -20,7 +20,7 @@ public class Order implements Serializable {
     }
 
     public int newSlice(int sliceSize) {
-        slices.add(new Order(id, clientOrderID, instrument, sliceSize));
+        slices.add(new Order(id, clientOrderID, instrument, sliceSize, side));
         return slices.size() - 1;
     }
 
@@ -41,6 +41,7 @@ public class Order implements Serializable {
 
     long clientid;
     public Instrument instrument;
+    int side;
     public double initialMarketPrice;
     ArrayList<Order> slices;
     ArrayList<Fill> fills;
@@ -59,9 +60,9 @@ public class Order implements Serializable {
     void createFill(long size, double price) {
         fills.add(new Fill(size, price));
         if (sizeRemaining() == 0) {
-            OrdStatus = '2';
+            OrdStatus = '2'; // Fully Filled
         } else {
-            OrdStatus = '1';
+            OrdStatus = '1'; // Partially Filled
         }
     }
 
@@ -129,11 +130,12 @@ public class Order implements Serializable {
         //state=cancelled
     }
 
-    public Order(long clientId, long ClientOrderID, Instrument instrument, int size) {
+    public Order(long clientId, long ClientOrderID, Instrument instrument, int size, int side) {
         this.clientOrderID = ClientOrderID;
         this.size = size;
         this.clientid = clientId;
         this.instrument = instrument;
+        this.side=side;
         fills = new ArrayList<Fill>();
         slices = new ArrayList<Order>();
     }

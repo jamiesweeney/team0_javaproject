@@ -248,7 +248,7 @@ public class OrderManager {
 
 
         // Create the new order and add to the order array
-        Order order = new Order(clientId, clientOrderId, nos.instrument, nos.size);
+        Order order = new Order(clientId, clientOrderId, nos.instrument, nos.size, nos.side);
         orders.put(id,order);
 
         // Send a message to the client with 39=A;
