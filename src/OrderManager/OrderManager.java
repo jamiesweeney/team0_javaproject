@@ -55,7 +55,7 @@ public class OrderManager {
 
 	//@param args the command line arguments
     // Contains the main order manager logic
-	public OrderManager(InetSocketAddress[] orderRouters, InetSocketAddress[] clients,InetSocketAddress trader,LiveMarketData liveMarketData)throws InterruptedException{
+	public OrderManager(InetSocketAddress[] orderRouters, InetSocketAddress[] clients,InetSocketAddress trader,LiveMarketData liveMarketData)throws InterruptedException, IOException, ClassNotFoundException{
 
 	    // Set up the order manager
         setup(orderRouters, clients, trader, liveMarketData);
@@ -76,7 +76,6 @@ public class OrderManager {
         int i=0;
         for(InetSocketAddress location:orderRouters){
             this.orderRouters[i++]=connect(location);
-            i++;
         }
 
         // Fill clients with connections
