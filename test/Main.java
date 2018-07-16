@@ -80,6 +80,11 @@ class MockClient extends Thread
 	}
 }
 
+
+
+
+
+
 class MockOM extends Thread
 {
 	InetSocketAddress[] clients;
@@ -101,8 +106,7 @@ class MockOM extends Thread
 		this.liveMarketData=liveMarketData;
 		this.setName(name);
 	}
-
-
+	
 	@Override
 	public void run()
 	{
