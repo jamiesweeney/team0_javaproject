@@ -296,9 +296,9 @@ public class OrderManager {
 
         ObjectOutputStream os=new ObjectOutputStream(orderRouters[minIndex].getOutputStream());
         os.writeObject(Router.api.routeOrder);
-        os.writeInt(o.id);
+        os.writeInt((int) o.id);
         os.writeInt(sliceId);
-        os.writeInt(o.sizeRemaining());
+        os.writeInt((int) o.sizeRemaining());
         os.writeObject(o.instrument);
         os.flush();
     }
@@ -327,7 +327,7 @@ public class OrderManager {
 
 		// If not then the order must be new
 		o.OrdStatus='0';
-		ObjectOutputStream os=new ObjectOutputStream(clients[o.clientid].getOutputStream());
+		ObjectOutputStream os=new ObjectOutputStream(clients[(int) o.clientid].getOutputStream());
     
 		// Write acknowledgement to the client
 		os.writeObject("11="+o.clientOrderID+";35=A;39=0");
@@ -363,7 +363,7 @@ public class OrderManager {
 		Order slice=o.slices.get(sliceId);
 
 		internalCross(id,slice);
-		int sizeRemaining=o.slices.get(sliceId).sizeRemaining();
+		int sizeRemaining= (int) o.slices.get(sliceId).sizeRemaining();
 		if(sizeRemaining>0){
 			routeOrder(id,sliceId,sizeRemaining,slice);
 		}
@@ -387,7 +387,7 @@ public class OrderManager {
             }
 
             //TODO add support here and in Order for limit orders
-            int sizeBefore=o.sizeRemaining();
+            int sizeBefore= (int) o.sizeRemaining();
             o.cross(matchingOrder);
 
             // If size has changed, send the order to the trader
@@ -413,7 +413,7 @@ public class OrderManager {
             os.writeInt(id);
             os.writeInt(sliceId);
             os.writeObject(order.instrument);
-            os.writeInt(order.sizeRemaining());
+            os.writeInt((int) order.sizeRemaining());
             os.flush();
         }
 
