@@ -11,12 +11,21 @@ import OrderRouter.Router;
 import Ref.Instrument;
 import Ref.Ric;
 
-public class SampleRouter extends Thread implements Router{
-	private static final Random RANDOM_NUM_GENERATOR=new Random();
-	private static final Instrument[] INSTRUMENTS={new Instrument(new Ric("VOD.L")), new Instrument(new Ric("BP.L")), new Instrument(new Ric("BT.L"))};
+public class SampleRouter extends Thread implements Router
+{
+    private static final Random RANDOM_NUM_GENERATOR = new Random();
+
+	private static final Instrument[] INSTRUMENTS = {new Instrument(new Ric("VOD.L")),
+                                                     new Instrument(new Ric("BP.L")),
+                                                     new Instrument(new Ric("BT.L"))};
+
 	private Socket omConn;
+
 	private int port;
-	public SampleRouter(String name,int port){
+
+	//SampleRouter Contructor
+	public SampleRouter(String name,int port)
+    {
 		this.setName(name);
 		this.port=port;
 	}

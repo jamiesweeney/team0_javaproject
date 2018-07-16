@@ -106,7 +106,7 @@ class MockOM extends Thread
 		this.liveMarketData=liveMarketData;
 		this.setName(name);
 	}
-	
+
 	@Override
 	public void run()
 	{
