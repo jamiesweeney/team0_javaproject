@@ -6,7 +6,8 @@ import java.net.Socket;
 import java.util.HashMap;
 
 import org.apache.log4j.Logger;
-import org.apache.log4j.xml.DOMConfigurator;
+import org.apache.log4j.PropertyConfigurator;
+
 
 import javax.net.ServerSocketFactory;
 
@@ -19,7 +20,7 @@ public class Trader extends Thread implements TradeScreen{
 	private static Socket omConn;
 	private int port;
 	Trader(String name,int port){
-		DOMConfigurator.configure("resources/log4j.xml");
+		PropertyConfigurator.configure("resources/log4j.properties");
 		this.setName(name);
 		this.port=port;
 	}

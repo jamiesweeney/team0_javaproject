@@ -3,7 +3,7 @@ import java.net.InetSocketAddress;
 
 
 import org.apache.log4j.Logger;
-import org.apache.log4j.xml.DOMConfigurator;
+import org.apache.log4j.PropertyConfigurator ;
 
 import LiveMarketData.LiveMarketData;
 import OrderManager.OrderManager;
@@ -15,7 +15,7 @@ public class Main
 		//Create main logging object.
 		Logger logger = Logger.getLogger(Main.class);
 		//Configure Log4J using the xml file in /resources.
-		DOMConfigurator.configure("resources/log4j.xml");
+		PropertyConfigurator.configure("resources/log4j.properties");
 
 		logger.info("TEST: this program tests OrderManager");
 
@@ -63,7 +63,7 @@ class MockClient extends Thread
 	{
 		try
 		{
-			DOMConfigurator.configure("resources/log4j.xml");
+			PropertyConfigurator.configure("resources/log4j.properties");
 
 			SampleClient client=new SampleClient(port);
 
@@ -126,7 +126,7 @@ class MockOM extends Thread
 	{
 		try
 		{
-			DOMConfigurator.configure("resources/log4j.xml");
+			PropertyConfigurator.configure("resources/log4j.properties");
 
 			//In order to debug constructors you can do F5 F7 F5
 			new OrderManager(routers,clients,trader,liveMarketData);
