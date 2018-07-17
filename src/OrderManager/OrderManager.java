@@ -463,8 +463,37 @@ public class OrderManager {
     }
 
     //TODO - implement this
-    private void cancelOrder() {
+    private void cancelOrder(int orderID) {
 
+            if (orders.get(orderID) == null) {
+
+            }
+            Order o = orders.get(orderID);
+            try {
+                ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.clientid].getOutputStream());
+                if (o.OrdStatus == '2' ) {
+                    os.writeObject("11=" + o.clientOrderID + ";39=4;35=9");
+                    os.flush();
+                }
+                else
+                {
+                    int rmvdContent =0;
+                    int filledCount =0;
+                    for (Order slice:o.slices) {
+                        if (slice.OrdStatus == '2')
+                        {
+                            filledCount++;
+                        }
+                        else if (slice.OrdStatus =='1')
+                        {
+                            o.slices.remove(slice);
+                            rmvdContent++;
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
     }
 
     //TODO - implement this
