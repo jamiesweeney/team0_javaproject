@@ -124,7 +124,6 @@ class MockOM extends Thread
 	@Override
 	public void run()
 	{
-
 		PropertyConfigurator.configure("resources/log4j.properties");
 
 		//In order to debug constructors you can do F5 F7 F5
