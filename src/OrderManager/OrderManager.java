@@ -37,9 +37,7 @@ public class OrderManager {
                         InetSocketAddress trader,
                         LiveMarketData liveMarketData)
     {      
-      PropertyConfigurator.configure("resources/log4j.properties");  
-      DOMConfigurator.configure("resources/log4j.xml");
-
+      PropertyConfigurator.configure("resources/log4j.properties");
       OrderManager.liveMarketData = liveMarketData;
 
       // Set up the order manager
