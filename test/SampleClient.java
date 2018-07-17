@@ -27,17 +27,29 @@ public class SampleClient extends Mock implements Client{
 	
 	@Override
 	public int sendOrder(Object par0)throws IOException{
-		int size=RANDOM_NUM_GENERATOR.nextInt(5000);
-		int instid=RANDOM_NUM_GENERATOR.nextInt(3);
-		Instrument instrument=INSTRUMENTS[RANDOM_NUM_GENERATOR.nextInt(INSTRUMENTS.length)];
-		NewOrderSingle nos=new NewOrderSingle(size,instid,instrument);
-		
-		show("sendOrder: id="+id+" size="+size+" instrument="+INSTRUMENTS[instid].toString());
+
+
+	    // Generate some data
+		int size=100;
+        float price = (float)RANDOM_NUM_GENERATOR.nextInt(100);
+        int instid = RANDOM_NUM_GENERATOR.nextInt(3);
+		Instrument instrument=INSTRUMENTS[instid];
+        int side = RANDOM_NUM_GENERATOR.nextInt(2) + 1;
+
+        // Make a new order single
+		NewOrderSingle nos = new NewOrderSingle(size,price,instrument,side);
+
+		// Adding order to queue
+		show("sendOrder: id="+id+" size="+size+" price="+price+" instrument="+INSTRUMENTS[instid].toString()+" side="+side);
 		OUT_QUEUE.put(id,nos);
+
+
+		// Write the order
+        // newOrderSingle; 35=D; id; nos;
 		if(omConn.isConnected()){
 			ObjectOutputStream os=new ObjectOutputStream(omConn.getOutputStream());
 			os.writeObject("newOrderSingle");
-			//os.writeObject("35=D;");
+			//os.writeObject("35=D;"); TODO - Work out why this crashes
 			os.writeInt(id);
 			os.writeObject(nos);
 			os.flush();
@@ -106,7 +118,7 @@ public class SampleClient extends Mock implements Client{
 						case 'P':partialFill(message);break;
 						case 'F':fullyFilled(message);
 					}*/
-					show("");
+//					show("");
 				}
 			}
 		} catch (IOException|ClassNotFoundException e){
