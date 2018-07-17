@@ -1,5 +1,13 @@
 package OrderManager;
 
+import Database.Database;
+import LiveMarketData.LiveMarketData;
+import OrderClient.NewOrderSingle;
+import OrderRouter.Router;
+import TradeScreen.TradeScreen;
+import org.apache.log4j.Logger;
+import org.apache.log4j.xml.DOMConfigurator;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -8,27 +16,15 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 
-import Database.Database;
-import LiveMarketData.LiveMarketData;
-import OrderClient.NewOrderSingle;
-import OrderRouter.Router;
-import TradeScreen.TradeScreen;
-
-import org.apache.log4j.Logger;
-import org.apache.log4j.xml.DOMConfigurator;
-
 public class OrderManager {
 
 
+    private static LiveMarketData liveMarketData;
     // Instance variables
     private Logger logger = Logger.getLogger(OrderManager.class);
-
-
     private HashMap<Integer, Order> orders = new HashMap<Integer, Order>(); //debugger will do this line as it gives state to the object
     //currently recording the number of new order messages we get. TODO why? use it for more?
     private int id = 0; //debugger will do this line as it gives state to the object
-
-    private static LiveMarketData liveMarketData;
     private Socket[] orderRouters;
     private Socket[] clients;
     private Socket trader;
@@ -38,11 +34,10 @@ public class OrderManager {
     public OrderManager(InetSocketAddress[] orderRouters,
                         InetSocketAddress[] clients,
                         InetSocketAddress trader,
-                        LiveMarketData liveMarketData)
-    {
+                        LiveMarketData liveMarketData) {
         DOMConfigurator.configure("resources/log4j.xml");
 
-        OrderManager.liveMarketData= liveMarketData;
+        OrderManager.liveMarketData = liveMarketData;
 
         // Set up the order manager
         setup(orderRouters, clients, trader);
@@ -51,7 +46,7 @@ public class OrderManager {
         mainLogic();
     }
 
-    private void setup(InetSocketAddress[] orderRouters, InetSocketAddress[] clients, InetSocketAddress trader){
+    private void setup(InetSocketAddress[] orderRouters, InetSocketAddress[] clients, InetSocketAddress trader) {
 
         // Set up trader connection
         this.trader = connect(trader);
@@ -73,23 +68,18 @@ public class OrderManager {
 
 
     // Creates a socket to an address
-    private Socket connect(InetSocketAddress location)
-    {
+    private Socket connect(InetSocketAddress location) {
         int tryCounter = 0;
         Socket s = null;
 
         // Try and connect 600 times
-        while (tryCounter < 600)
-        {
-            try
-            {
+        while (tryCounter < 600) {
+            try {
                 // Create the socket
                 s = new Socket(location.getHostName(), location.getPort());
                 s.setKeepAlive(true);
                 break;
-            }
-            catch (IOException e)
-            {
+            } catch (IOException e) {
                 tryCounter++;
             }
         }
@@ -120,8 +110,7 @@ public class OrderManager {
         Checks the messages for all clients
         Creates a new order if order requests received.
     */
-    private void checkClients()
-    {
+    private void checkClients() {
         int clientId;
         Socket client;
         ObjectInputStream is;
@@ -139,8 +128,7 @@ public class OrderManager {
                     logger.info(Thread.currentThread().getName() + " calling " + method);
 
                     // Determine the message type
-                    switch (method)
-                    {
+                    switch (method) {
                         // If a new order single, we want to create a new Order object
                         case "newOrderSingle":
                             newOrder(clientId, is.readInt(), (NewOrderSingle) is.readObject());
@@ -150,15 +138,11 @@ public class OrderManager {
                             break;
                     }
                 }
-            }
-            catch (IOException e)
-            {
+            } catch (IOException e) {
                 // TODO - TEAM 15
                 logger.error("IOException detected: " + e);
                 e.printStackTrace();
-            }
-            catch (ClassNotFoundException e)
-            {
+            } catch (ClassNotFoundException e) {
                 // TODO - TEAM 15
                 logger.error("ClassNotFoundException detected: " + e);
                 e.printStackTrace();
@@ -177,7 +161,7 @@ public class OrderManager {
 
         // Send a message to the client
         ObjectOutputStream os = new ObjectOutputStream(clients[clientId].getOutputStream());
-        os.writeObject("11=" + clientOrderId + ";35=A;39=A;54="+nos.side+";");
+        os.writeObject("11=" + clientOrderId + ";35=A;39=A;54=" + nos.side + ";");
         os.flush();
 
         // Send this order to the trading screen
@@ -221,8 +205,7 @@ public class OrderManager {
                     logger.info(Thread.currentThread().getName() + " calling " + method);
 
                     // Determine the message type
-                    switch (method)
-                    {
+                    switch (method) {
                         //TODO - Figure out what is happening here
                         // If a best price message, we want to
                         case "bestPrice":
@@ -244,15 +227,11 @@ public class OrderManager {
                             break;
                     }
                 }
-            }
-            catch (IOException e)
-            {
+            } catch (IOException e) {
                 // TODO - TEAM 15
                 logger.error("IOException detected: " + e);
                 e.printStackTrace();
-            }
-            catch (ClassNotFoundException e)
-            {
+            } catch (ClassNotFoundException e) {
                 // TODO - TEAM 15
                 logger.error("ClassNotFoundException detected: " + e);
                 e.printStackTrace();
@@ -316,8 +295,7 @@ public class OrderManager {
                 String method = (String) is.readObject();
                 logger.info(Thread.currentThread().getName() + " calling " + method);
                 // Determine the message type
-                switch (method)
-                {
+                switch (method) {
                     // If the trader has accepted the new order
                     case "acceptOrder":
                         acceptOrder(is.readInt());
@@ -328,15 +306,11 @@ public class OrderManager {
                         sliceOrder(is.readInt(), is.readInt());
                 }
             }
-        }
-        catch (IOException e)
-        {
+        } catch (IOException e) {
             // TODO - TEAM 15
             logger.error("IOException detected: " + e);
             e.printStackTrace();
-        }
-        catch (ClassNotFoundException e)
-        {
+        } catch (ClassNotFoundException e) {
             // TODO - TEAM 15
             logger.error("ClassNotFoundException detected: " + e);
             e.printStackTrace();
@@ -425,16 +399,16 @@ public class OrderManager {
             if (entry.getKey() == id) {
                 continue;
 
-            // Don't include non equal instruments
-            }else if(!(matchingOrder.instrument.equals(o.instrument))){
+                // Don't include non equal instruments
+            } else if (!(matchingOrder.instrument.equals(o.instrument))) {
                 continue;
 
-            // Don't include non matching prices
-            }else if(!(matchingOrder.initialMarketPrice == o.initialMarketPrice)){
+                // Don't include non matching prices
+            } else if (!(matchingOrder.initialMarketPrice == o.initialMarketPrice)) {
                 continue;
 
-            // Don't include orders with same side
-            }else if((matchingOrder.side == o.side)){
+                // Don't include orders with same side
+            } else if ((matchingOrder.side == o.side)) {
                 continue;
             }
 
