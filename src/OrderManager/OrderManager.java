@@ -7,7 +7,7 @@ import OrderRouter.Router;
 import TradeScreen.TradeScreen;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
-import org.apache.log4j.xml.DOMConfigurator;
+
 
 import java.io.IOException;
 import java.io.ObjectInputStream;

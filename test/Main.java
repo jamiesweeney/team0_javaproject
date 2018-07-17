@@ -2,6 +2,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 
+import Ref.Instrument;
+import Ref.Ric;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator ;
 
@@ -69,7 +71,8 @@ class MockClient extends Thread
 
 			if(port==2000)
 			{
-				//TODO why does this take an arg?
+				//client.sendOrder(int id, int size, char msgType, float price, Instrument ins, int side);
+				//client.sendOrder(0, 100, 'D', 8.0f, new Instrument(new Ric("VOD.L")), 1);
 				client.sendRandomOrder();
 
 				int id=client.sendRandomOrder();
@@ -87,7 +90,6 @@ class MockClient extends Thread
 		catch (IOException e)
 		{
 			logger.error("IOException caught: look into run method of MockClient: " + e);
-
 		}
 	}
 }
