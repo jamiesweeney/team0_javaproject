@@ -448,9 +448,11 @@ public class OrderManager {
 
 
     // Router request logic
+
+    // routeOrder bascially just sends the order tot the exchanges and get a price for them
+    // in comparison reallyRouteOrder picks the best price and routes the order to that exchange
     private void routeOrder(int id, int sliceId, int size, Order order) throws IOException {
 
-        // TODO - why reallyRouteOrder vs routeOrder?
         ObjectOutputStream os;
 
         // Iterate over router sockets
