@@ -1,7 +1,8 @@
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.logging.Level;
-import java.util.logging.Logger;
+
+import org.apache.log4j.Logger;
 
 import LiveMarketData.LiveMarketData;
 import OrderManager.OrderManager;
