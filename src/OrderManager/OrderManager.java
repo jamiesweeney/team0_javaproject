@@ -174,7 +174,7 @@ public class OrderManager {
 
         // Send a message to the client
         ObjectOutputStream os = new ObjectOutputStream(clients[clientId].getOutputStream());
-        os.writeObject("11=" + clientOrderId + ";35=A;39=A;54="+nos.side);
+        os.writeObject("11=" + clientOrderId + ";35=A;39=A;54="+nos.side+";");
         os.flush();
 
         // Send this order to the trading screen
@@ -391,7 +391,6 @@ public class OrderManager {
         Order slice = o.slices.get(sliceId);
 
         // Do internal cross with slice
-        // TODO - what does the internal cross do?
         internalCross(id, slice);
         int sizeRemaining = (int) o.slices.get(sliceId).sizeRemaining();
 
@@ -405,7 +404,9 @@ public class OrderManager {
     /*
         Performs an internal cross, if theres 2 matching buy/sell then match them
 
-        TODO - what is this?
+        The internal cross attempts to match 2 trades that can be completed within the OM system
+        as opposed to routing it to the exchange. This avoids exchange fees and makes the bank/clients more money
+        overall.
 
      */
     private void internalCross(int id, Order o) throws IOException {
@@ -413,22 +414,27 @@ public class OrderManager {
         // Iterating over all the orders
         for (Map.Entry<Integer, Order> entry : orders.entrySet()) {
 
+            Order matchingOrder = entry.getValue();
+
             // Don't include the order we're trying to cross
             if (entry.getKey().intValue() == id) {
                 continue;
-            }
 
-            Order matchingOrder = entry.getValue();
-
-            // Don't include orders that are a different instrument or different market price (must match)
-            // TODO - fix this statement
-            if (!(matchingOrder.instrument.equals(o.instrument))) {
+            // Don't include non equal instruments
+            }else if(!(matchingOrder.instrument.equals(o.instrument))){
                 continue;
-            } else if (!(matchingOrder.initialMarketPrice == o.initialMarketPrice)) {
+
+            // Don't include non matching prices
+            }else if(!(matchingOrder.initialMarketPrice == o.initialMarketPrice)){
+                continue;
+
+            // Don't include orders with same side
+            }else if((matchingOrder.side == o.side)){
                 continue;
             }
 
             //TODO add support here and in Order for limit orders
+
             // If everything passed, cross the orders
             int sizeBefore = (int) o.sizeRemaining();
             o.cross(matchingOrder);
