@@ -241,7 +241,6 @@ public class OrderManager {
                             break;
                     }
                 }
-                // TODO - handle properly
             }
             catch (IOException e)
             {
