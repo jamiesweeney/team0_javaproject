@@ -3,7 +3,9 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.Random;
-import java.util.logging.Logger;
+
+import org.apache.log4j.Logger;
+import org.apache.log4j.xml.DOMConfigurator;
 
 import javax.net.ServerSocketFactory;
 
@@ -13,7 +15,7 @@ import Ref.Ric;
 
 public class SampleRouter extends Thread implements Router
 {
-    private Logger log = Logger.getLogger(SampleRouter.class.getName());
+    private Logger logger = Logger.getLogger(SampleRouter.class);
 
     private static final Random RANDOM_NUM_GENERATOR = new Random();
 
@@ -32,6 +34,7 @@ public class SampleRouter extends Thread implements Router
 	//SampleRouter Constructor
 	public SampleRouter(String name, int port)
     {
+    	DOMConfigurator.configure("resources/log4j.xml");
 		this.setName(name);
 		this.port=port;
 	}
@@ -54,7 +57,7 @@ public class SampleRouter extends Thread implements Router
 
 					Router.api methodName = (Router.api)is.readObject();
 
-					log.info("Order Router recieved method call for:" + methodName);
+					logger.info("Order Router received method call for:" + methodName);
 
 					switch(methodName)
                     {
@@ -82,8 +85,7 @@ public class SampleRouter extends Thread implements Router
 		}
 		catch (IOException | ClassNotFoundException | InterruptedException e)
         {
-            log.info("Exception caught: ");
-			e.printStackTrace();
+            logger.error("Exception caught: " + e);
 		}
 	}
 
