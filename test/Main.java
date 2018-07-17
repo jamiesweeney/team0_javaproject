@@ -1,7 +1,9 @@
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
+
+import org.apache.log4j.Logger;
+import org.apache.log4j.xml.DOMConfigurator;
 
 import LiveMarketData.LiveMarketData;
 import OrderManager.OrderManager;
@@ -10,8 +12,12 @@ public class Main
 {
 	public static void main(String[] args) throws IOException
 	{
-		Logger log = Logger.getLogger(Main.class.getName());
-		log.info("TEST: this program tests ordermanager");
+		//Create main logging object.
+		Logger logger = Logger.getLogger(Main.class);
+		//Configure Log4J using the xml file in /resources.
+		DOMConfigurator.configure("resources/log4j.xml");
+
+		logger.info("TEST: this program tests OrderManager");
 
 		//start sample clients
 		new MockClient("Client 1",2000).start();
@@ -43,7 +49,8 @@ public class Main
 
 class MockClient extends Thread
 {
-	Logger log = Logger.getLogger(MockClient.class.getName());
+	private Logger logger = Logger.getLogger(MockClient.class);
+
 	int port;
 
 	MockClient(String name,int port)
@@ -56,6 +63,8 @@ class MockClient extends Thread
 	{
 		try
 		{
+			DOMConfigurator.configure("resources/log4j.xml");
+
 			SampleClient client=new SampleClient(port);
 
 			if(port==2000)
@@ -77,9 +86,8 @@ class MockClient extends Thread
 		}
 		catch (IOException e)
 		{
-			// TODO Auto-generated catch block
-			log.info("IOException caught: look into run method of MockClient.");
-			e.printStackTrace();
+			logger.error("IOException caught: look into run method of MockClient: " + e);
+
 		}
 	}
 }
@@ -91,6 +99,8 @@ class MockClient extends Thread
 
 class MockOM extends Thread
 {
+	private Logger logger = Logger.getLogger(MockOM.class);
+
 	InetSocketAddress[] clients;
 	InetSocketAddress[] routers;
 
@@ -116,12 +126,15 @@ class MockOM extends Thread
 	{
 		try
 		{
+			DOMConfigurator.configure("resources/log4j.xml");
+
 			//In order to debug constructors you can do F5 F7 F5
 			new OrderManager(routers,clients,trader,liveMarketData);
 		}
 		catch(IOException | ClassNotFoundException | InterruptedException ex)
 		{
-			Logger.getLogger(MockOM.class.getName()).log(Level.SEVERE,null,ex);
+			//Logger.getLogger(MockOM.class.getName()).log(Level.SEVERE,null,ex);
+			logger.error("Exception caught in MockOM run: " + ex);
 		}
 	}
 }

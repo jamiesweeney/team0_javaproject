@@ -14,10 +14,14 @@ import OrderClient.NewOrderSingle;
 import OrderRouter.Router;
 import TradeScreen.TradeScreen;
 
+import org.apache.log4j.Logger;
+import org.apache.log4j.xml.DOMConfigurator;
+
 public class OrderManager {
 
 
     // Instance variables
+    private Logger logger = Logger.getLogger(OrderManager.class);
 
 
     private HashMap<Integer, Order> orders = new HashMap<Integer, Order>(); //debugger will do this line as it gives state to the object
@@ -31,8 +35,12 @@ public class OrderManager {
 
 
     // Constructor
-    public OrderManager(InetSocketAddress[] orderRouters, InetSocketAddress[] clients, InetSocketAddress trader, LiveMarketData liveMarketData) throws InterruptedException, IOException, ClassNotFoundException {
-
+    public OrderManager(InetSocketAddress[] orderRouters,
+                        InetSocketAddress[] clients,
+                        InetSocketAddress trader,
+                        LiveMarketData liveMarketData) throws InterruptedException, IOException, ClassNotFoundException
+    {
+        DOMConfigurator.configure("resources/log4j.xml");
         // Set up the order manager
         setup(orderRouters, clients, trader, liveMarketData);
 
@@ -61,20 +69,25 @@ public class OrderManager {
     }
 
     //TODO - fix this
-    private Socket connect(InetSocketAddress location) throws InterruptedException {
+    private Socket connect(InetSocketAddress location) throws InterruptedException
+    {
         boolean connected = false;
         int tryCounter = 0;
-        while (!connected && tryCounter < 600) {
-            try {
+        while (!connected && tryCounter < 600)
+        {
+            try
+            {
                 Socket s = new Socket(location.getHostName(), location.getPort());
                 s.setKeepAlive(true);
                 return s;
-            } catch (IOException e) {
+            }
+            catch (IOException e)
+            {
                 Thread.sleep(1000);
                 tryCounter++;
             }
         }
-        System.out.println("Failed to connect to " + location.toString());
+        logger.error("Failed to connect to " + location.toString());
         return null;
     }
 
@@ -101,7 +114,8 @@ public class OrderManager {
         Checks the messages for all clients
         Creates a new order if order requests received.
     */
-    private void checkClients() {
+    private void checkClients()
+    {
         int clientId;
         Socket client;
         ObjectInputStream is;
@@ -116,22 +130,31 @@ public class OrderManager {
 
                     is = new ObjectInputStream(client.getInputStream()); //create an object inputstream, this is a pretty stupid way of doing it, why not create it once rather than every time around the loop
                     String method = (String) is.readObject();
-                    System.out.println(Thread.currentThread().getName() + " calling " + method);
+                    logger.info(Thread.currentThread().getName() + " calling " + method);
 
                     // Determine the message type
-                    switch (method) {
-
+                    switch (method)
+                    {
                         // If a new order single, we want to create a new Order object
                         case "newOrderSingle":
                             newOrder(clientId, is.readInt(), (NewOrderSingle) is.readObject());
                             break;
                         //TODO create a default case which errors with "Unknown message type"+...
+                        default:
+                            logger.error("Error, unknown mesage type: " + method);
+                            break;
                     }
                 }
                 // TODO - handle properly
-            } catch (IOException e) {
+            }
+            catch (IOException e)
+            {
+                logger.error("IOException detected: " + e);
                 e.printStackTrace();
-            } catch (ClassNotFoundException e) {
+            }
+            catch (ClassNotFoundException e)
+            {
+                logger.error("ClassNotFoundException detected: " + e);
                 e.printStackTrace();
             }
         }
@@ -141,7 +164,6 @@ public class OrderManager {
         Deals with new order requests from the client
     */
     private void newOrder(int clientId, int clientOrderId, NewOrderSingle nos) throws IOException {
-
 
         // Create the new order and add to the order array
         Order order = new Order(clientId, clientOrderId, nos.instrument, nos.size, nos.side);
@@ -192,11 +214,11 @@ public class OrderManager {
 
                     is = new ObjectInputStream(router.getInputStream()); //create an object inputstream, this is a pretty stupid way of doing it, why not create it once rather than every time around the loop
                     String method = (String) is.readObject();
-                    System.out.println(Thread.currentThread().getName() + " calling " + method);
+                    logger.info(Thread.currentThread().getName() + " calling " + method);
 
                     // Determine the message type
-                    switch (method) {
-
+                    switch (method)
+                    {
                         //TODO - Figure out what is happening here
                         // If a best price message, we want to
                         case "bestPrice":
@@ -219,9 +241,15 @@ public class OrderManager {
                     }
                 }
                 // TODO - handle properly
-            } catch (IOException e) {
+            }
+            catch (IOException e)
+            {
+                logger.error("IOException detected: " + e);
                 e.printStackTrace();
-            } catch (ClassNotFoundException e) {
+            }
+            catch (ClassNotFoundException e)
+            {
+                logger.error("ClassNotFoundException detected: " + e);
                 e.printStackTrace();
             }
         }
@@ -279,11 +307,10 @@ public class OrderManager {
             if (0 < this.trader.getInputStream().available()) {
                 is = new ObjectInputStream(this.trader.getInputStream());
                 String method = (String) is.readObject();
-                System.out.println(Thread.currentThread().getName() + " calling " + method);
-
+                logger.info(Thread.currentThread().getName() + " calling " + method);
                 // Determine the message type
-                switch (method) {
-
+                switch (method)
+                {
                     // If the trader has accepted the new order
                     case "acceptOrder":
                         acceptOrder(is.readInt());
@@ -294,9 +321,15 @@ public class OrderManager {
                         sliceOrder(is.readInt(), is.readInt());
                 }
             }
-        } catch (IOException e) {
+        }
+        catch (IOException e)
+        {
+            logger.error("IOException detected: " + e);
             e.printStackTrace();
-        } catch (ClassNotFoundException e) {
+        }
+        catch (ClassNotFoundException e)
+        {
+            logger.error("ClassNotFoundException detected: " + e);
             e.printStackTrace();
         }
     }
@@ -309,7 +342,7 @@ public class OrderManager {
 
         // If the order is pending new, order has already been accepted
         if (o.OrdStatus != 'A') {
-            System.out.println("error accepting order that has already been accepted");
+            logger.error("Error accepting order that has already been accepted");
             return;
         }
 
