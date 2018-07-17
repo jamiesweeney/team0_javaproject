@@ -43,6 +43,7 @@ public class Main
 
 class MockClient extends Thread
 {
+	Logger log = Logger.getLogger(MockClient.class.getName());
 	int port;
 
 	MockClient(String name,int port)
@@ -77,6 +78,7 @@ class MockClient extends Thread
 		catch (IOException e)
 		{
 			// TODO Auto-generated catch block
+			log.info("IOException caught: look into run method of MockClient.");
 			e.printStackTrace();
 		}
 	}
