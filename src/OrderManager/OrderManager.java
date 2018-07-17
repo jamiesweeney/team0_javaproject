@@ -147,15 +147,16 @@ public class OrderManager {
                             break;
                     }
                 }
-                // TODO - handle properly
             }
             catch (IOException e)
             {
+                // TODO - TEAM 15
                 logger.error("IOException detected: " + e);
                 e.printStackTrace();
             }
             catch (ClassNotFoundException e)
             {
+                // TODO - TEAM 15
                 logger.error("ClassNotFoundException detected: " + e);
                 e.printStackTrace();
             }
@@ -242,15 +243,16 @@ public class OrderManager {
                             break;
                     }
                 }
-                // TODO - handle properly
             }
             catch (IOException e)
             {
+                // TODO - TEAM 15
                 logger.error("IOException detected: " + e);
                 e.printStackTrace();
             }
             catch (ClassNotFoundException e)
             {
+                // TODO - TEAM 15
                 logger.error("ClassNotFoundException detected: " + e);
                 e.printStackTrace();
             }
@@ -326,11 +328,13 @@ public class OrderManager {
         }
         catch (IOException e)
         {
+            // TODO - TEAM 15
             logger.error("IOException detected: " + e);
             e.printStackTrace();
         }
         catch (ClassNotFoundException e)
         {
+            // TODO - TEAM 15
             logger.error("ClassNotFoundException detected: " + e);
             e.printStackTrace();
         }
