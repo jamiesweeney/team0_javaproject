@@ -15,6 +15,7 @@ import OrderRouter.Router;
 import TradeScreen.TradeScreen;
 
 import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
 import org.apache.log4j.xml.DOMConfigurator;
 
 public class OrderManager {
@@ -40,7 +41,7 @@ public class OrderManager {
                         InetSocketAddress trader,
                         LiveMarketData liveMarketData) throws InterruptedException, IOException, ClassNotFoundException
     {
-        DOMConfigurator.configure("resources/log4j.xml");
+        PropertyConfigurator.configure("resources/log4j.properties");
         // Set up the order manager
         setup(orderRouters, clients, trader, liveMarketData);
 

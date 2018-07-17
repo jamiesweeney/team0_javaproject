@@ -13,7 +13,7 @@ import Ref.Instrument;
 import Ref.Ric;
 
 import org.apache.log4j.Logger;
-import org.apache.log4j.xml.DOMConfigurator;
+import org.apache.log4j.PropertyConfigurator;
 import org.w3c.dom.DOMError;
 
 public class SampleClient extends Mock implements Client
@@ -37,7 +37,7 @@ public class SampleClient extends Mock implements Client
 			
 	public SampleClient(int port) throws IOException
 	{
-		DOMConfigurator.configure("resources/log4j.xml");
+		PropertyConfigurator.configure("resources/log4j.properties");
 
 		//OM will connect to us
 		omConn=new ServerSocket(port).accept();
