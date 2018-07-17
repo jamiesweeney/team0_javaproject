@@ -138,7 +138,16 @@ public class OrderManager {
                             break;
 
                         case "sendCancel":
-                            cancelOrder(is.readInt());
+                            int id = is.readInt();
+                            Order o = orders.get(id);
+                            if (o.routeCode == 0)
+                            {
+                                cancelOrder(id);
+                            }
+//                            if (o.routeCode == 2)
+//                            {
+//                                sendCancel(o, );
+//                            }
                         //TODO create a default case which errors with "Unknown message type"+...
                         default:
                             logger.error("Error, unknown mesage type: " + method);
@@ -266,6 +275,7 @@ public class OrderManager {
 
         //TODO - add buy or sell to order message
         // Route to the minimum
+        o.routerID = minIndex;
         ObjectOutputStream os = new ObjectOutputStream(orderRouters[minIndex].getOutputStream());
         os.writeObject(Router.api.routeOrder);
         os.writeInt((int) o.id);
@@ -383,6 +393,7 @@ public class OrderManager {
         // If the internal cross does not satisfy then route to exchange
         if (sizeRemaining > 0) {
             routeOrder(id, sliceId, sizeRemaining, slice);
+            o.routeCode = 2;
         }
     }
 
@@ -461,13 +472,11 @@ public class OrderManager {
 
     //TODO - implement this
     private void cancelOrder(int orderID) {
-
-            if (orders.get(orderID) == null) {
-
-            }
             Order o = orders.get(orderID);
             try {
                 ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.clientid].getOutputStream());
+
+
                 if (o.OrdStatus == '2' ) {
                     os.writeObject("11=" + o.clientOrderID + ";39=4;35=9");
                     os.flush();
