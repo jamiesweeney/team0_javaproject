@@ -38,7 +38,8 @@ public class Trader extends Thread implements TradeScreen{
 					is=new ObjectInputStream(s);  //TODO check if we need to create each time. this will block if no data, but maybe we can still try to create it once instead of repeatedly
 					api method=(api)is.readObject();
 					logger.info(Thread.currentThread().getName()+" calling: "+method);
-					switch(method){
+					switch(method)
+					{
 						case newOrder:newOrder(is.readInt(),(Order)is.readObject());break;
 						case price:price(is.readInt(),(Order)is.readObject());break;
 						case cross:is.readInt();is.readObject();break; //TODO
@@ -49,12 +50,14 @@ public class Trader extends Thread implements TradeScreen{
 					Thread.sleep(1000);
 				}
 			}
-		} catch (IOException | ClassNotFoundException | InterruptedException e) {
-			// TODO Auto-generated catch block
+		}
+		catch (IOException | ClassNotFoundException | InterruptedException e)
+		{
 			logger.error("Exception caught: " + e);
 			e.printStackTrace();
 		}
 	}
+
 	@Override
 	public void newOrder(int id,Order order) throws IOException, InterruptedException {
 		//TODO the order should go in a visual grid, but not needed for test purposes

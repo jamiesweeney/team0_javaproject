@@ -70,16 +70,16 @@ class MockClient extends Thread
 			if(port==2000)
 			{
 				//TODO why does this take an arg?
-				client.sendOrder(null);
+				client.sendRandomOrder();
 
-				int id=client.sendOrder(null);
+				int id=client.sendRandomOrder();
 
 				//TODO client.sendCancel(id);
 				client.messageHandler();
 			}
 			else
 			{
-				client.sendOrder(null);
+				client.sendRandomOrder();
 				client.messageHandler();
 			}
 
