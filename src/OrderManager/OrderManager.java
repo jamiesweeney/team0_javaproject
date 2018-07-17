@@ -38,31 +38,34 @@ public class OrderManager {
     public OrderManager(InetSocketAddress[] orderRouters,
                         InetSocketAddress[] clients,
                         InetSocketAddress trader,
-                        LiveMarketData liveMarketData) throws InterruptedException, IOException, ClassNotFoundException
+                        LiveMarketData liveMarketData)
     {
         DOMConfigurator.configure("resources/log4j.xml");
+
+        OrderManager.liveMarketData= liveMarketData;
+
         // Set up the order manager
-        setup(orderRouters, clients, trader, liveMarketData);
+        setup(orderRouters, clients, trader);
 
         // Start doing the main logic
         mainLogic();
     }
 
-    private void setup(InetSocketAddress[] orderRouters, InetSocketAddress[] clients, InetSocketAddress trader, LiveMarketData liveMarketData) throws InterruptedException {
-        // Set up instance variables
-        this.liveMarketData = liveMarketData;
+    private void setup(InetSocketAddress[] orderRouters, InetSocketAddress[] clients, InetSocketAddress trader){
+
+        // Set up trader connection
         this.trader = connect(trader);
-        this.orderRouters = new Socket[orderRouters.length];
-        this.clients = new Socket[clients.length];
 
         // Fill order routers with connections
         int i = 0;
+        this.orderRouters = new Socket[orderRouters.length];
         for (InetSocketAddress location : orderRouters) {
             this.orderRouters[i++] = connect(location);
         }
 
         // Fill clients with connections
         i = 0;
+        this.clients = new Socket[clients.length];
         for (InetSocketAddress location : clients) {
             this.clients[i++] = connect(location);
         }
@@ -72,11 +75,10 @@ public class OrderManager {
     // Creates a socket to an address
     private Socket connect(InetSocketAddress location)
     {
-        boolean connected = false;
         int tryCounter = 0;
 
         // Try and connect 600 times
-        while (!connected && tryCounter < 600)
+        while (tryCounter < 600)
         {
             try
             {
@@ -264,6 +266,8 @@ public class OrderManager {
 
         //TODO - this assumes we are buying rather than selling
         // Iterate over prices and find minimum
+
+
         int minIndex = 0;
         double min = o.bestPrices[0];
         for (int i = 1; i < o.bestPrices.length; i++) {
