@@ -76,6 +76,7 @@ public class OrderManager {
     private Socket connect(InetSocketAddress location)
     {
         int tryCounter = 0;
+        Socket s = null;
 
         // Try and connect 600 times
         while (tryCounter < 600)
@@ -83,9 +84,9 @@ public class OrderManager {
             try
             {
                 // Create the socket
-                Socket s = new Socket(location.getHostName(), location.getPort());
+                s = new Socket(location.getHostName(), location.getPort());
                 s.setKeepAlive(true);
-                return s;
+                break;
             }
             catch (IOException e)
             {
@@ -93,7 +94,7 @@ public class OrderManager {
             }
         }
         logger.error("Failed to connect to " + location.toString());
-        return null;
+        return s;
     }
 
     /*
@@ -345,7 +346,7 @@ public class OrderManager {
     /*
         If the trader accepts the new order, prices the order
     */
-    public void acceptOrder(int id) throws IOException {
+    private void acceptOrder(int id) throws IOException {
         Order o = orders.get(id);
 
         // If the order is pending new, order has already been accepted
@@ -380,7 +381,7 @@ public class OrderManager {
     /*
         If the trader requested a slice for the new order
     */
-    public void sliceOrder(int id, int sliceSize) throws IOException {
+    private void sliceOrder(int id, int sliceSize) throws IOException {
         Order o = orders.get(id);
 
         //Order has a list of slices, and a list of fills, each slice is a child order and each fill is associated with either a child order or the original order
@@ -421,7 +422,7 @@ public class OrderManager {
             Order matchingOrder = entry.getValue();
 
             // Don't include the order we're trying to cross
-            if (entry.getKey().intValue() == id) {
+            if (entry.getKey() == id) {
                 continue;
 
             // Don't include non equal instruments
