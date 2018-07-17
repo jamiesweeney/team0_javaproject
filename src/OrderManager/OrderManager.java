@@ -73,17 +73,19 @@ public class OrderManager {
     {
         boolean connected = false;
         int tryCounter = 0;
+
+        // Try and connect 600 times
         while (!connected && tryCounter < 600)
         {
             try
             {
+                // Create the socket
                 Socket s = new Socket(location.getHostName(), location.getPort());
                 s.setKeepAlive(true);
                 return s;
             }
             catch (IOException e)
             {
-                Thread.sleep(1000);
                 tryCounter++;
             }
         }
