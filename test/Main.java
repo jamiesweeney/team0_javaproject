@@ -70,16 +70,16 @@ class MockClient extends Thread
 			if(port==2000)
 			{
 				//TODO why does this take an arg?
-				client.sendOrder(null);
+				client.sendRandomOrder();
 
-				int id=client.sendOrder(null);
+				int id=client.sendRandomOrder();
 
 				//TODO client.sendCancel(id);
 				client.messageHandler();
 			}
 			else
 			{
-				client.sendOrder(null);
+				client.sendRandomOrder();
 				client.messageHandler();
 			}
 
@@ -124,12 +124,9 @@ class MockOM extends Thread
 	@Override
 	public void run()
 	{
+		PropertyConfigurator.configure("resources/log4j.properties");
 
-			PropertyConfigurator.configure("resources/log4j.properties");
-
-			//In order to debug constructors you can do F5 F7 F5
-			new OrderManager(routers,clients,trader,liveMarketData);
-
-
+		//In order to debug constructors you can do F5 F7 F5
+		new OrderManager(routers,clients,trader,liveMarketData);
 	}
 }

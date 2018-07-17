@@ -14,7 +14,7 @@ import Ref.Ric;
 
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
-import org.w3c.dom.DOMError;
+
 
 public class SampleClient extends Mock implements Client
 {
@@ -43,22 +43,50 @@ public class SampleClient extends Mock implements Client
 		omConn=new ServerSocket(port).accept();
 		logger.info("OM connected to client port "+port);
 	}
-	
-	@Override
-	public int sendOrder(Object par0)throws IOException
-	{
-	    // Generate some data
-		int size=100;
-        float price = (float)RANDOM_NUM_GENERATOR.nextInt(100);
-        int instid = RANDOM_NUM_GENERATOR.nextInt(3);
-		Instrument instrument=INSTRUMENTS[instid];
-        int side = RANDOM_NUM_GENERATOR.nextInt(2) + 1;
 
-        // Make a new order single
+
+	public int sendRandomOrder() throws IOException
+	{
+		// Generate some data
+		int size=100;
+		float price = (float)RANDOM_NUM_GENERATOR.nextInt(100);
+		int instid = RANDOM_NUM_GENERATOR.nextInt(3);
+		Instrument instrument=INSTRUMENTS[instid];
+		int side = RANDOM_NUM_GENERATOR.nextInt(2) + 1;
+
+		// Make a new order single
 		NewOrderSingle nos = new NewOrderSingle(size,price,instrument,side);
 
 		// Adding order to queue
 		show("sendOrder: id="+id+" size="+size+" price="+price+" instrument="+INSTRUMENTS[instid].toString()+" side="+side);
+		OUT_QUEUE.put(id,nos);
+
+
+		// Write the order
+		// newOrderSingle; 35=D; id; nos;
+		if(omConn.isConnected())
+		{
+			ObjectOutputStream os=new ObjectOutputStream(omConn.getOutputStream());
+			os.writeObject("newOrderSingle");
+			//os.writeObject("35=D;"); TODO - Work out why this crashes
+			os.writeInt(id);
+			os.writeObject(nos);
+			os.flush();
+		}
+		return id++;
+	}
+
+
+
+
+	@Override
+	public int sendOrder(int id, int size, char msgType, float price, Instrument ins, int side)throws IOException
+	{
+        // Make a new order single
+		NewOrderSingle nos = new NewOrderSingle(size,price,ins,side);
+
+		// Adding order to queue
+		show("sendOrder: id="+id+" size="+size+" msgType="+ins.toString()+" price="+price+" instrument="+ins+" side="+side);
 		OUT_QUEUE.put(id,nos);
 
 
@@ -120,21 +148,33 @@ public class SampleClient extends Mock implements Client
 		
 		ObjectInputStream is;
 		try {
-			while(true){
+			while(true)
+			{
 				//is.wait(); //this throws an exception!!
-				while(0<omConn.getInputStream().available()){
+				while(0<omConn.getInputStream().available())
+				{
 					is = new ObjectInputStream(omConn.getInputStream());
+
 					String fix=(String)is.readObject();
+
 					logger.info(Thread.currentThread().getName()+" received fix message: "+fix);
+
 					String[] fixTags=fix.split(";");
 					int OrderId=-1;
+
 					char MsgType;
+
 					int OrdStatus;
-					methods whatToDo=methods.dontKnow;
+
+					methods whatToDo = methods.dontKnow;
+
 					//String[][] fixTagsValues=new String[fixTags.length][2];
-					for(int i=0;i<fixTags.length;i++){
+
+					for(int i=0;i<fixTags.length;i++)
+					{
 						String[] tag_value=fixTags[i].split("=");
-						switch(tag_value[0]){
+						switch(tag_value[0])
+						{
 							case"11":OrderId=Integer.parseInt(tag_value[1]);break;
 							case"35":MsgType=tag_value[1].charAt(0);
 								if(MsgType=='A')whatToDo=methods.newOrderSingleAcknowledgement;
@@ -142,7 +182,8 @@ public class SampleClient extends Mock implements Client
 							case"39":OrdStatus=tag_value[1].charAt(0);break;
 						}
 					}
-					switch(whatToDo){
+					switch(whatToDo)
+					{
 						case newOrderSingleAcknowledgement:newOrderSingleAcknowledgement(OrderId);
 					}
 					
@@ -156,8 +197,10 @@ public class SampleClient extends Mock implements Client
 //					show("");
 				}
 			}
-		} catch (IOException|ClassNotFoundException e){
-			// TODO Auto-generated catch block
+		}
+		catch (IOException|ClassNotFoundException e)
+		{
+			logger.error("Exception caught: " + e);
 			e.printStackTrace();
 		}
 	}

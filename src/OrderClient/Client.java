@@ -3,10 +3,11 @@ package OrderClient;
 import java.io.IOException;
 
 import OrderManager.Order;
+import Ref.Instrument;
 
 public interface Client{
 	//Outgoing messages
-	int sendOrder(Object par0)throws IOException;
+	int sendOrder(int id, int size,char msgType, float price, Instrument ins, int side)throws IOException;
 	void sendCancel(int id);
 	
 	//Incoming messages

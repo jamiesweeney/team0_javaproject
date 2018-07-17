@@ -37,9 +37,7 @@ public class OrderManager {
                         InetSocketAddress trader,
                         LiveMarketData liveMarketData)
     {      
-      PropertyConfigurator.configure("resources/log4j.properties");  
-      DOMConfigurator.configure("resources/log4j.xml");
-
+      PropertyConfigurator.configure("resources/log4j.properties");
       OrderManager.liveMarketData = liveMarketData;
 
       // Set up the order manager
@@ -243,11 +241,14 @@ public class OrderManager {
                             break;
                     }
                 }
-            } catch (IOException e) {
+
+            }
+          catch (IOException e) {
                 // TODO - TEAM 15
                 logger.error("IOException detected: " + e);
                 e.printStackTrace();
-            } catch (ClassNotFoundException e) {
+            } 
+          catch (ClassNotFoundException e) {
                 // TODO - TEAM 15
                 logger.error("ClassNotFoundException detected: " + e);
                 e.printStackTrace();
