@@ -127,8 +127,6 @@ public class OrderManager {
                     is = new ObjectInputStream(client.getInputStream()); //create an object inputstream, this is a pretty stupid way of doing it, why not create it once rather than every time around the loop
                     String method = (String) is.readObject();
                     logger.info(Thread.currentThread().getName() + " calling " + method);
-                    System.out.println(method);
-                    System.out.println(method.equals("sendCancel"));
                     // Determine the message type
                     switch (method) {
                         // If a new order single, we want to create a new Order object
@@ -176,7 +174,7 @@ public class OrderManager {
 
         // Send a message to the client
         ObjectOutputStream os = new ObjectOutputStream(clients[clientId].getOutputStream());
-        os.writeObject("11=" + clientOrderId + ";35=A;39=A;54=" + nos.side + ";");
+        os.writeObject("11=" + clientOrderId + ";35=D;39=A;54=" + nos.side + ";");
         os.flush();
 
         // Send this order to the trading screen
@@ -380,7 +378,7 @@ public class OrderManager {
         //Order has a list of slices, and a list of fills, each slice is a child order and each fill is associated with either a child order or the original order
         //Make sure that the slice size is valid (must be less than the remaining orders)
         if (sliceSize > o.sizeRemaining() - o.sliceSizes()) {
-            System.out.println("error sliceSize is bigger than remaining size to be filled on the order");
+            logger.error("error sliceSize is bigger than remaining size to be filled on the order");
             return;
         }
 
