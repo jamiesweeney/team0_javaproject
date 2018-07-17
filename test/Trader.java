@@ -76,6 +76,7 @@ public class Trader extends Thread implements TradeScreen{
 	public void price(int id,Order o) throws InterruptedException, IOException {
 		//TODO should update the trade screen
 		Thread.sleep(2134);
-		sliceOrder(id,orders.get(id).sizeRemaining()/2);
+		//TODO: Remove this int conversion so no info is lost
+		sliceOrder(id,(int) orders.get(id).sizeRemaining()/2);
 	}
 }
