@@ -127,14 +127,14 @@ public class OrderManager {
                     is = new ObjectInputStream(client.getInputStream()); //create an object inputstream, this is a pretty stupid way of doing it, why not create it once rather than every time around the loop
                     String method = (String) is.readObject();
                     logger.info(Thread.currentThread().getName() + " calling " + method);
-
+                    System.out.println(method);
+                    System.out.println(method.equals("sendCancel"));
                     // Determine the message type
                     switch (method) {
                         // If a new order single, we want to create a new Order object
                         case "newOrderSingle":
                             newOrder(clientId, is.readInt(), (NewOrderSingle) is.readObject());
                             break;
-
                         case "sendCancel":
                             int id = is.readInt();
                             Order o = orders.get(id);
@@ -142,6 +142,7 @@ public class OrderManager {
                             {
                                 cancelOrder(id);
                             }
+                            break;
 //                            if (o.routeCode == 2)
 //                            {
 //                                sendCancel(o, );
@@ -479,7 +480,7 @@ public class OrderManager {
 
 
                 if (o.OrdStatus == '2' ) {
-                    os.writeObject("11=" + o.clientOrderID + ";39=4;35=9");
+                    os.writeObject("11=" + o.clientOrderID + ";39=8;35=9");
                     os.flush();
                 }
                 else
@@ -491,12 +492,13 @@ public class OrderManager {
                         {
                             filledCount++;
                         }
-                        else if (slice.OrdStatus =='1')
+                        else if (slice.OrdStatus =='0')
                         {
                             o.slices.remove(slice);
                             rmvdContent++;
                         }
                     }
+                    os.writeObject("11="+o.clientid+";39=4;35=9");
                 }
             } catch (IOException e) {
                 e.printStackTrace();

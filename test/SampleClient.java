@@ -141,7 +141,7 @@ public class SampleClient extends Mock implements Client
 		OUT_QUEUE.remove(order.clientOrderID);
 	}
 
-	enum methods{newOrderSingleAcknowledgement,dontKnow};
+	enum methods{newOrderSingleAcknowledgement,dontKnow, orderCancellationSuccessful, orderCancellationRejected};
 
 	@Override
 	public void messageHandler(){
@@ -178,13 +178,18 @@ public class SampleClient extends Mock implements Client
 							case"11":OrderId=Integer.parseInt(tag_value[1]);break;
 							case"35":MsgType=tag_value[1].charAt(0);
 								if(MsgType=='A')whatToDo=methods.newOrderSingleAcknowledgement;
+								if(MsgType=='9')whatToDo= methods.orderCancellationRejected;
 								break;
-							case"39":OrdStatus=tag_value[1].charAt(0);break;
+							case"39":OrdStatus=tag_value[1].charAt(0);
+								if(OrdStatus=='4')whatToDo=methods.orderCancellationSuccessful;
+							break;
+
 						}
 					}
 					switch(whatToDo)
 					{
 						case newOrderSingleAcknowledgement:newOrderSingleAcknowledgement(OrderId);
+						case orderCancellationSuccessful:orderCancelSuccessful();
 					}
 					
 					/*message=connection.getMessage();
@@ -208,6 +213,12 @@ public class SampleClient extends Mock implements Client
 	void newOrderSingleAcknowledgement(int OrderId){
 		logger.info(Thread.currentThread().getName()+" called newOrderSingleAcknowledgement");
 		//do nothing, as not recording so much state in the NOS class at present
+	}
+	void orderCancelSuccessful() {
+		logger.info(Thread.currentThread().getName()+" called order Cancel Successful");
+	}
+	void orderCancellationRejected(){
+		logger.info(Thread.currentThread().getName()+" called order cancellation rejected");
 	}
 /*listen for connections
 once order manager has connected, then send and cancel orders randomly
