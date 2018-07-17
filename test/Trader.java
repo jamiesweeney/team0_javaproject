@@ -5,16 +5,22 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.HashMap;
 
+import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
+
+
 import javax.net.ServerSocketFactory;
 
 import OrderManager.Order;
 import TradeScreen.TradeScreen;
 
 public class Trader extends Thread implements TradeScreen{
+	private Logger logger = Logger.getLogger(Trader.class);
 	private HashMap<Integer,Order> orders=new HashMap<Integer,Order>();
 	private static Socket omConn;
 	private int port;
 	Trader(String name,int port){
+		PropertyConfigurator.configure("resources/log4j.properties");
 		this.setName(name);
 		this.port=port;
 	}
@@ -31,7 +37,7 @@ public class Trader extends Thread implements TradeScreen{
 				if(0<s.available()){
 					is=new ObjectInputStream(s);  //TODO check if we need to create each time. this will block if no data, but maybe we can still try to create it once instead of repeatedly
 					api method=(api)is.readObject();
-					System.out.println(Thread.currentThread().getName()+" calling: "+method);
+					logger.info(Thread.currentThread().getName()+" calling: "+method);
 					switch(method){
 						case newOrder:newOrder(is.readInt(),(Order)is.readObject());break;
 						case price:price(is.readInt(),(Order)is.readObject());break;
@@ -45,6 +51,7 @@ public class Trader extends Thread implements TradeScreen{
 			}
 		} catch (IOException | ClassNotFoundException | InterruptedException e) {
 			// TODO Auto-generated catch block
+			logger.error("Exception caught: " + e);
 			e.printStackTrace();
 		}
 	}
@@ -76,6 +83,7 @@ public class Trader extends Thread implements TradeScreen{
 	public void price(int id,Order o) throws InterruptedException, IOException {
 		//TODO should update the trade screen
 		Thread.sleep(2134);
-		sliceOrder(id,orders.get(id).sizeRemaining()/2);
+		//TODO: Remove this int conversion so no info is lost
+		sliceOrder(id,(int) orders.get(id).sizeRemaining()/2);
 	}
 }
