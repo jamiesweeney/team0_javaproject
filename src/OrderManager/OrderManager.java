@@ -136,6 +136,10 @@ public class OrderManager {
                         case "newOrderSingle":
                             newOrder(clientId, is.readInt(), (NewOrderSingle) is.readObject());
                             break;
+
+                        case "sendCancel":
+                            cancelOrder(is.readInt());
+                        //TODO create a default case which errors with "Unknown message type"+...
                         default:
                             logger.error("Error, unknown mesage type: " + method);
                             break;
