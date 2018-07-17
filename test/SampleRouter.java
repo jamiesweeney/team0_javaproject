@@ -5,7 +5,8 @@ import java.net.Socket;
 import java.util.Random;
 
 import org.apache.log4j.Logger;
-import org.apache.log4j.xml.DOMConfigurator;
+import org.apache.log4j.PropertyConfigurator;
+
 
 import javax.net.ServerSocketFactory;
 
@@ -34,7 +35,7 @@ public class SampleRouter extends Thread implements Router
 	//SampleRouter Constructor
 	public SampleRouter(String name, int port)
     {
-    	DOMConfigurator.configure("resources/log4j.xml");
+		PropertyConfigurator.configure("resources/log4j.properties");
 		this.setName(name);
 		this.port=port;
 	}
