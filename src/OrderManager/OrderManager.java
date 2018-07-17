@@ -68,8 +68,9 @@ public class OrderManager {
         }
     }
 
-    //TODO - fix this
-    private Socket connect(InetSocketAddress location) throws InterruptedException
+
+    // Creates a socket to an address
+    private Socket connect(InetSocketAddress location)
     {
         boolean connected = false;
         int tryCounter = 0;
@@ -141,7 +142,6 @@ public class OrderManager {
                         case "newOrderSingle":
                             newOrder(clientId, is.readInt(), (NewOrderSingle) is.readObject());
                             break;
-                        //TODO create a default case which errors with "Unknown message type"+...
                         default:
                             logger.error("Error, unknown mesage type: " + method);
                             break;
