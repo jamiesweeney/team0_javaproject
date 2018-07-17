@@ -105,12 +105,19 @@ public class SampleClient extends Mock implements Client
 	}
 
 	@Override
-	public void sendCancel(int idToCancel)
-	{
-		show("sendCancel: id="+idToCancel);
-		if(omConn.isConnected())
-		{
-			//OMconnection.sendMessage("cancel",idToCancel);
+	public void sendCancel(int idToCancel) {
+		show("sendCancel: id=" + idToCancel);
+		if (omConn.isConnected()) {
+			// OMconnection.sendMessage("cancel",idToCancel);
+			try {
+				ObjectOutputStream os = new ObjectOutputStream(omConn.getOutputStream());
+				os.writeObject("sendCancel");
+				os.writeInt(idToCancel);
+				os.flush();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+
 		}
 	}
 
