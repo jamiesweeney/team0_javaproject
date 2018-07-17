@@ -172,11 +172,9 @@ public class OrderManager {
         Order order = new Order(clientId, clientOrderId, nos.instrument, nos.size, nos.side);
         orders.put(id, order);
 
-        // Send a message to the client with 39=A;
-        // OrdStatus is Fix 39, 'A' is 'Pending New'
-        //TODO - add a fix code for buy/sell
+        // Send a message to the client
         ObjectOutputStream os = new ObjectOutputStream(clients[clientId].getOutputStream());
-        os.writeObject("11=" + clientOrderId + ";35=A;39=A;");
+        os.writeObject("11=" + clientOrderId + ";35=A;39=A;54="+nos.side);
         os.flush();
 
         // Send this order to the trading screen
