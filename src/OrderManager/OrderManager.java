@@ -172,8 +172,8 @@ public class OrderManager {
         // Send a message to the client
         ObjectOutputStream os = new ObjectOutputStream(clients[clientId].getOutputStream());
 
-        os.writeObject("11=" + clientOrderId + ";39=A;35=A;54=" + nos.side + ";");
-        generateMessage(os, clientOrderId, '4', '9', nos.side);
+
+        generateMessage(os, clientOrderId, 'A', 'D', nos.side);
 
         os.flush();
 
@@ -354,7 +354,7 @@ public class OrderManager {
         ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.clientid].getOutputStream());
 
         // Write acknowledgement to the client
-        generateMessage(os, (int)o.clientOrderID, '4', 'A', o.side);
+        generateMessage(os, (int)o.clientOrderID, 'A', 'D', o.side);
         os.flush();
 
         // price the order
