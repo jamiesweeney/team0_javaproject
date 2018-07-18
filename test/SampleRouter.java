@@ -123,7 +123,18 @@ public class SampleRouter extends Thread implements Router
                            int size,
                            Instrument i)
     {
-        //MockI.show(""+order);
+        logger.info("Order: " + id + " Slice: " + sliceId + " cancelled");
+        try {
+			os = new ObjectOutputStream(omConn.getOutputStream());
+			os.writeObject("orderCancelled");
+			os.writeInt(id);
+			os.writeInt(sliceId);
+			os.flush();
+		}
+		catch(IOException e)
+		{
+			e.printStackTrace();
+		}
 	}
 
 

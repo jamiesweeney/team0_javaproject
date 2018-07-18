@@ -35,16 +35,15 @@ public class OrderManager {
     public OrderManager(InetSocketAddress[] orderRouters,
                         InetSocketAddress[] clients,
                         InetSocketAddress trader,
-                        LiveMarketData liveMarketData)
-    {      
-      PropertyConfigurator.configure("resources/log4j.properties");
-      OrderManager.liveMarketData = liveMarketData;
+                        LiveMarketData liveMarketData) {
+        PropertyConfigurator.configure("resources/log4j.properties");
+        OrderManager.liveMarketData = liveMarketData;
 
-      // Set up the order manager
-      setup(orderRouters, clients, trader);
+        // Set up the order manager
+        setup(orderRouters, clients, trader);
 
-      // Start doing the main logic
-      mainLogic();
+        // Start doing the main logic
+        mainLogic();
     }
 
     private void setup(InetSocketAddress[] orderRouters, InetSocketAddress[] clients, InetSocketAddress trader) {
@@ -136,15 +135,13 @@ public class OrderManager {
                         case "sendCancel":
                             int id = is.readInt();
                             Order o = orders.get(id);
-                            if (o.routeCode == 0)
-                            {
+                            if (o.routeCode == 0) {
                                 cancelOrder(id);
                             }
+                            if (o.routeCode == 2) {
+                                sendCancel(o, orderRouters[o.routerID]);
+                            }
                             break;
-//                            if (o.routeCode == 2)
-//                            {
-//                                sendCancel(o, );
-//                            }
                         //TODO create a default case which errors with "Unknown message type"+...
                         default:
                             logger.error("Error, unknown mesage type: " + method);
@@ -222,15 +219,20 @@ public class OrderManager {
                         //TODO - Figure out what is happening here
                         // If a best price message, we want to
                         case "bestPrice":
-                            int OrderId = is.readInt();
-                            int SliceId = is.readInt();
+                            int orderId = is.readInt();
+                            int sliceId = is.readInt();
 
-                            Order slice = orders.get(OrderId).slices.get(SliceId);
+                            Order slice = orders.get(orderId).slices.get(sliceId);
                             slice.bestPrices[routerId] = is.readDouble();
                             slice.bestPriceCount += 1;
 
                             if (slice.bestPriceCount == slice.bestPrices.length)
-                                reallyRouteOrder(SliceId, slice);
+                                reallyRouteOrder(sliceId, slice);
+                            break;
+                        case "orderCancelled":
+                            orderId = is.readInt();
+                            sliceId = is.readInt();
+                            cancelSuccess(orderId, sliceId);
                             break;
 
                         //TODO - Figure out what is happening here
@@ -241,13 +243,11 @@ public class OrderManager {
                     }
                 }
 
-            }
-          catch (IOException e) {
+            } catch (IOException e) {
                 // TODO - TEAM 15
                 logger.error("IOException detected: " + e);
                 e.printStackTrace();
-            } 
-          catch (ClassNotFoundException e) {
+            } catch (ClassNotFoundException e) {
                 // TODO - TEAM 15
                 logger.error("ClassNotFoundException detected: " + e);
                 e.printStackTrace();
@@ -472,41 +472,66 @@ public class OrderManager {
 
     //TODO - implement this
     private void cancelOrder(int orderID) {
-            Order o = orders.get(orderID);
-            try {
-                ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.clientid].getOutputStream());
+        Order o = orders.get(orderID);
+        try {
+            ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.clientid].getOutputStream());
 
 
-                if (o.OrdStatus == '2' ) {
-                    os.writeObject("11=" + o.clientOrderID + ";39=8;35=9");
-                    os.flush();
-                }
-                else
-                {
-                    int rmvdContent =0;
-                    int filledCount =0;
-                    for (Order slice:o.slices) {
-                        if (slice.OrdStatus == '2')
-                        {
-                            filledCount++;
-                        }
-                        else if (slice.OrdStatus =='0')
-                        {
-                            o.slices.remove(slice);
-                            rmvdContent++;
-                        }
+            if (o.OrdStatus == '2') {
+                os.writeObject("11=" + o.clientOrderID + ";39=8;35=9");
+                os.flush();
+            } else {
+                int rmvdContent = 0;
+                int filledCount = 0;
+                for (Order slice : o.slices) {
+                    if (slice.OrdStatus == '2') {
+                        filledCount++;
+                    } else if (slice.OrdStatus == '0') {
+                        o.slices.remove(slice);
+                        rmvdContent++;
                     }
-                    os.writeObject("11="+o.clientid+";39=4;35=9");
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
+                os.writeObject("11=" + o.clientid + ";39=4;35=9");
             }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     //TODO - implement this
-    private void sendCancel(Order order, Router orderRouter) {
-        //orderRouter.sendCancel(order);
-        //order.orderRouter.writeObject(order);
+    private void sendCancel(Order order, Socket routerSocket) {
+//        orderRouter.sendCancel(order);
+//        order.orderRouter.writeObject(order);
+        try {
+            ObjectOutputStream os;
+            os = new ObjectOutputStream(routerSocket.getOutputStream());
+            for (int i = 0; i < order.slices.size(); i++) {
+                os.writeObject(Router.api.sendCancel);
+                os.writeInt((int)order.id);
+                os.writeInt(i);
+                os.writeObject(order.instrument);
+                //os.writeInt((int) order.sizeRemaining());
+                os.flush();
+            }
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
     }
 
+    private void cancelSuccess(int orderID, int sliceID)
+    {
+        Order o = orders.get(orderID);
+        try {
+            ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.clientid].getOutputStream());
+            os.writeObject("11=" + o.clientid + ";39=4;35=9");
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+
+    }
 }
+
