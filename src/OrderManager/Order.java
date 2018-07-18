@@ -162,21 +162,3 @@ public class Order implements Serializable {
         //state=cancelled
     }
 }
-
-class Basket
-{
-    Order[] orders;
-}
-
-class Fill implements Serializable
-{
-    //long id;
-    long size;
-    double price;
-
-    Fill(long size, double price)
-    {
-        this.size = size;
-        this.price = price;
-    }
-}
