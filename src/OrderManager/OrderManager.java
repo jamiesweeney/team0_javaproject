@@ -173,7 +173,8 @@ public class OrderManager {
 
         // Send a message to the client
         ObjectOutputStream os = new ObjectOutputStream(clients[clientId].getOutputStream());
-        os.writeObject("11=" + clientOrderId + ";35=A;39=A;54=" + nos.side + ";");
+        os.writeObject("11=" + clientOrderId + ";39=A;35=A;54=" + nos.side + ";");
+        generateMessage(os, clientOrderId, '4', '9', nos.side);
         os.flush();
 
         // Send this order to the trading screen
@@ -353,7 +354,7 @@ public class OrderManager {
         ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.clientid].getOutputStream());
 
         // Write acknowledgement to the client
-        os.writeObject("11=" + o.clientOrderID + ";35=A;39=0");
+        generateMessage(os, (int)o.clientOrderID, '4', 'A', o.side);
         os.flush();
 
         // price the order
@@ -480,7 +481,7 @@ public class OrderManager {
 
 
             if (o.OrdStatus == '2') {
-                os.writeObject("11=" + o.clientOrderID + ";39=8;35=9");
+                generateMessage(os, (int)o.clientOrderID, '8', '9', o.side);
                 os.flush();
             } else {
                 int rmvdContent = 0;
@@ -493,7 +494,8 @@ public class OrderManager {
                         rmvdContent++;
                     }
                 }
-                os.writeObject("11=" + o.clientid + ";39=4;35=9");
+                generateMessage(os, (int)o.clientOrderID, '4', '9', o.side);
+                os.flush();
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -527,13 +529,25 @@ public class OrderManager {
         Order o = orders.get(orderID);
         try {
             ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.clientid].getOutputStream());
-            os.writeObject("11=" + o.clientid + ";39=4;35=9");
+            generateMessage(os, (int)o.clientOrderID, '4', '9', o.side);
+            os.flush();
         }
         catch (IOException e)
         {
             e.printStackTrace();
         }
 
+    }
+
+    private void generateMessage(ObjectOutputStream os, int clientOID, char ordStatus, char msgType, int side)
+    {
+        try {
+            os.writeObject("11=" + clientOID + ";39=" + ordStatus + ";35=" + msgType + "54=" + side);
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
     }
 }
 
