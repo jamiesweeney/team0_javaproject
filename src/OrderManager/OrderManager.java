@@ -29,6 +29,7 @@ public class OrderManager {
     private Socket[] orderRouters;
     private Socket[] clients;
     private Socket trader;
+    private boolean isRunning;
 
 
     // Constructor
@@ -42,6 +43,7 @@ public class OrderManager {
         // Set up the order manager
         setup(orderRouters, clients, trader);
 
+        startOM();
         // Start doing the main logic
         mainLogic();
     }
@@ -97,7 +99,7 @@ public class OrderManager {
     private void mainLogic() {
 
         // Constantly check for messages
-        while (true) {
+        while (isRunning) {
 
             // Check each client / router / trader in turn
             checkClients();
@@ -265,11 +267,11 @@ public class OrderManager {
 
         // Iterate over prices and find minimum
         // Route to the minimum
-        if (o.side == 1)
+        if (o.side == 1)//if buying the stock
         {
             o.routerID = findPurchaseRoute(o);
         }
-        if(o.side == 2)
+        else if(o.side == 2)//if selling the stock
         {
             o.routerID = findSalesRoute(o);
         }
@@ -443,8 +445,10 @@ public class OrderManager {
 
     // Router request logic
 
-    // routeOrder bascially just sends the order tot the exchanges and get a price for them
-    // in comparison reallyRouteOrder picks the best price and routes the order to that exchange
+    /*
+    routeOrder basically just sends the order to the exchanges and get a price for them
+    in comparison reallyRouteOrder picks the best price and routes the order to that exchange
+    */
     private void routeOrder(int id, int sliceId, int size, Order order) throws IOException {
 
         ObjectOutputStream os;
@@ -467,7 +471,7 @@ public class OrderManager {
         order.bestPriceCount = 0;
     }
 
-    //TODO - implement this
+
     private void cancelOrder(int orderID) {
         Order o = orders.get(orderID);
         try {
@@ -496,7 +500,7 @@ public class OrderManager {
         }
     }
 
-    //TODO - implement this
+
     private void sendCancel(Order order, Socket routerSocket) {
 //        orderRouter.sendCancel(order);
 //        order.orderRouter.writeObject(order);
@@ -568,6 +572,15 @@ public class OrderManager {
             }
         }
         return maxIndex;
+    }
+
+    public void startOM()
+    {
+        isRunning = true;
+    }
+    public void stopOM()
+    {
+        isRunning = false;
     }
 }
 
