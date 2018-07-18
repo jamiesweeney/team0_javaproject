@@ -140,10 +140,10 @@ public class OrderManager {
                             if (o.routeCode == 0) {
                                 cancelOrder(id);
                             }
+                            if (o.routeCode == 2) {
+                                sendCancel(o, orderRouters[o.routerID]);
+                            }
                             break;
-                        if (o.routeCode == 2) {
-                            sendCancel(o, orderRouters[o.routerID]);
-                        }
                         //TODO create a default case which errors with "Unknown message type"+...
                         default:
                             logger.error("Error, unknown mesage type: " + method);
@@ -221,15 +221,20 @@ public class OrderManager {
                         //TODO - Figure out what is happening here
                         // If a best price message, we want to
                         case "bestPrice":
-                            int OrderId = is.readInt();
-                            int SliceId = is.readInt();
+                            int orderId = is.readInt();
+                            int sliceId = is.readInt();
 
-                            Order slice = orders.get(OrderId).slices.get(SliceId);
+                            Order slice = orders.get(orderId).slices.get(sliceId);
                             slice.bestPrices[routerId] = is.readDouble();
                             slice.bestPriceCount += 1;
 
                             if (slice.bestPriceCount == slice.bestPrices.length)
-                                reallyRouteOrder(SliceId, slice);
+                                reallyRouteOrder(sliceId, slice);
+                            break;
+                        case "orderCancelled":
+                            orderId = is.readInt();
+                            sliceId = is.readInt();
+                            cancelSuccess(orderId, sliceId);
                             break;
 
                         //TODO - Figure out what is happening here
@@ -517,6 +522,18 @@ public class OrderManager {
         }
     }
 
+    private void cancelSuccess(int orderID, int sliceID)
+    {
+        Order o = orders.get(orderID);
+        try {
+            ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.clientid].getOutputStream());
+            os.writeObject("11=" + o.clientid + ";39=4;35=9");
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
 
+    }
 }
 
