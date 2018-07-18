@@ -8,33 +8,36 @@ import Ref.Instrument;
 public class Order implements Serializable {
 
     // Instance variables
-    long clientid;
-    public long clientOrderID;
-    public Instrument instrument;
+    private long clientID; // Unique ID of a client
+    //
+    //
+    //
+    private long clientOrderID; // Unique orderID for a client
+    private long omID; // Unique orderID within entire Order Manager DB
+    private Instrument instrument;
+    private char ordStatus = 'A'; // ordStatus is Fix 39, 'A' is 'Pending New'
+    private int side; // Buy Side or Sell Side / 1 or 2
+    private long size; // Size of order
 
-    public int routeCode;
-    public int routerID;
+    // TODO Refactor these out? Worth the effort?
+    private ArrayList<Fill> fills;
+    private ArrayList<Order> slices;
 
-    long size;
-    int side;
-    ArrayList<Fill> fills;
-    ArrayList<Order> slices;
 
-    public long id;
-    double[] bestPrices;
-    long bestPriceCount;
-    //    long orderRouter; TODO - Do we need this?
+    private int routeCode;
+    private int routerID;
+    //long orderRouter; TODO - Do we need this?
+    private double[] bestPrices;
+    private long bestPriceCount;
     //    Status state;
-
-    public double initialMarketPrice;
-    char OrdStatus = 'A'; //OrdStatus is Fix 39, 'A' is 'Pending New'
+    private double initialMarketPrice;
 
 
     // Constructor
-    public Order(long clientId, long ClientOrderID, Instrument instrument, int size, int side) {
+    public Order(long clientID, long ClientOrderID, Instrument instrument, int size, int side) {
         this.clientOrderID = ClientOrderID;
         this.size = size;
-        this.clientid = clientId;
+        this.clientID = clientID;
         this.instrument = instrument;
         this.side=side;
         fills = new ArrayList<Fill>();
@@ -53,7 +56,7 @@ public class Order implements Serializable {
 
     // Adds a new to the slice array, returns the slice index
     public int newSlice(int sliceSize) {
-        slices.add(new Order(id, clientOrderID, instrument, sliceSize, side));
+        slices.add(new Order(omID, clientOrderID, instrument, sliceSize, side));
         return slices.size() - 1;
     }
 
@@ -89,9 +92,9 @@ public class Order implements Serializable {
     void createFill(long size, double price) {
         fills.add(new Fill(size, price));
         if (sizeRemaining() == 0) {
-            OrdStatus = '2'; // Fully Filled
+            ordStatus = '2'; // Fully Filled
         } else {
-            OrdStatus = '1'; // Partially Filled
+            ordStatus = '1'; // Partially Filled
         }
     }
 
@@ -156,9 +159,83 @@ public class Order implements Serializable {
         }
     }
 
-
     // TODO - add functionality
     void cancel() {
         //state=cancelled
+    }
+
+    public long getClientID() {
+        return this.clientID;
+    }
+
+    public long getClientOrderID() {
+        return this.clientOrderID;
+    }
+
+    public Instrument getInstrument() {
+        return this.instrument;
+    }
+
+    public int getRouteCode() {
+        return this.routeCode;
+    }
+
+    public void setRouteCode(int routeCode) {
+        this.routeCode = routeCode;
+    }
+
+    public int getRouterID() {
+        return this.routerID;
+    }
+
+    public void setRouterID(int routerID) {
+        this.routerID = routerID;
+    }
+
+    public long getSize() {
+        return this.size;
+    }
+
+    public int getSide() {
+        return this.side;
+    }
+
+    public ArrayList<Fill> getFills() {
+        return this.fills;
+    }
+
+    public ArrayList<Order> getSlices() {
+        return this.slices;
+    }
+
+    public long getOmID() {
+        return this.omID;
+    }
+
+    public double[] getBestPrices() {
+        return this.bestPrices;
+    }
+
+    public void setBestPrices(double[] bestPrices) {
+        this.bestPrices = bestPrices;
+    }
+
+    public long getBestPriceCount() {
+        return this.bestPriceCount;
+    }
+
+    public void setBestPriceCount(long bestPriceCount) {
+        this.bestPriceCount = bestPriceCount;
+    }
+    public double getInitialMarketPrice() {
+        return this.initialMarketPrice;
+    }
+
+    public char getOrdStatus() {
+        return this.ordStatus;
+    }
+
+    public void setOrdStatus(char ordStatus) {
+        this.ordStatus = ordStatus;
     }
 }
