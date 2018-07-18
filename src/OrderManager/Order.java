@@ -11,6 +11,10 @@ public class Order implements Serializable {
     long clientid;
     public long clientOrderID;
     public Instrument instrument;
+
+    public int routeCode;
+    public int routerID;
+
     long size;
     int side;
     ArrayList<Fill> fills;
