@@ -55,8 +55,8 @@ public class Main
 
 		LiveMarketData liveMarketData = new SampleLiveMarketData();
 
-		//new MockOM("Order Manager",routers,clients,trader,liveMarketData).start();
-		new MockOM("MockOM").start();
+		new MockOM("Order Manager",routers,trader,liveMarketData).start();
+
 	}
 }
 
@@ -153,8 +153,16 @@ class MockOM extends Thread
 		this.liveMarketData=liveMarketData;
 		this.setName(name);
 	}
-	MockOM(String name)
+
+
+	MockOM(String name,
+		   InetSocketAddress[] routers,
+		   InetSocketAddress trader,
+		   LiveMarketData liveMarketData)
 	{
+		this.routers=routers;
+		this.trader=trader;
+		this.liveMarketData=liveMarketData;
 		this.setName(name);
 	}
 
@@ -164,6 +172,6 @@ class MockOM extends Thread
 		PropertyConfigurator.configure("resources/log4j.properties");
 
 		//In order to debug constructors you can do F5 F7 F5
-		new OrderManager(routers,clients,trader,liveMarketData);
+		new OrderManager(routers,trader,liveMarketData);
 	}
 }

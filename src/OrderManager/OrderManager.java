@@ -15,10 +15,8 @@ import java.io.ObjectOutputStream;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Queue;
+import java.nio.channels.ServerSocketChannel;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
@@ -37,9 +35,9 @@ public class OrderManager {
     private boolean isRunning;
 
     protected Socket[] orderRouters;
-    protected Socket[] clients;
+    protected List<Socket> clients = new ArrayList<Socket>();
     protected Socket trader;
-
+    ServerSocketChannel omOpenPort = null;
 
     protected Queue<OrderJob> clientQueue;
 
@@ -47,16 +45,28 @@ public class OrderManager {
 
     // Constructor
     public OrderManager(InetSocketAddress[] orderRouters,
-                        InetSocketAddress[] clients,
                         InetSocketAddress trader,
                         LiveMarketData liveMarketData) {
 
-        System.out.println("IS this even working");
+        System.out.println("Entered Constructor in OrderManager");
         PropertyConfigurator.configure("resources/log4j.properties");
         OrderManager.liveMarketData = liveMarketData;
 
+        try
+        {
+            omOpenPort = ServerSocketChannel.open();
+            omOpenPort.socket().bind(new InetSocketAddress(2025));
+            logger.info("Server port opened on port 2025 successfully.");
+        }
+        catch(IOException e)
+        {
+            logger.error("IOException caught in OrderManager constructor");
+            e.printStackTrace();
+        }
+
+
         // Set up the order manager
-        setup(orderRouters, clients, trader);
+        setup(orderRouters, trader);
 
         startOM();
         // Start doing the main logic
@@ -79,8 +89,8 @@ public class OrderManager {
         }
     }
 
-    private void setup(InetSocketAddress[] orderRouters, InetSocketAddress[] clients, InetSocketAddress trader) {
-        System.out.println("IS this even working");
+    private void setup(InetSocketAddress[] orderRouters, InetSocketAddress trader) {
+        System.out.println("Entered Setup in OrderManager");
 
 
 
@@ -94,20 +104,27 @@ public class OrderManager {
             this.orderRouters[i++] = connect(location);
         }
 
-        // Fill clients with connections
-        i = 0;
-        this.clients = new Socket[clients.length];
-        for (InetSocketAddress location : clients) {
-            this.clients[i++] = connect(location);
-        }
-
-        // Set up incoming messages queues
+//        // Fill clients with connections
+//        i = 0;
+//        this.clients = new Socket[clients.length];
+//        for (InetSocketAddress location : clients) {
+//            this.clients[i++] = connect(location);
+//        }
+//
+//        // Set up incoming messages queues
         clientQueue = new LinkedBlockingQueue<>();
-
-        // Initiate our message handling threads
+//
+//      // Initiate our message handling threads
         Thread t = new Thread(new ClientWorkerThread(clientQueue ,this));
         t.start();
-        System.out.println("IS this even working");
+
+        Thread th = new Thread(new ClientConnectionThread(this));
+        th.start();
+        System.out.println("Leaving Setup in OrderMananger");
+
+
+
+
     }
 
 
@@ -122,12 +139,13 @@ public class OrderManager {
                 // Create the socket
                 s = new Socket(location.getHostName(), location.getPort());
                 s.setKeepAlive(true);
-                break;
+                return s;
             } catch (IOException e) {
                 tryCounter++;
             }
         }
         logger.error("Failed to connect to " + location.toString());
+//        logger.error("s is equal to ")
         return s;
     }
 
@@ -143,13 +161,24 @@ public class OrderManager {
 
         // Constantly check for messages
 
-        while (isRunning) {
-
-
+        while (isRunning)
+        {
             // Check each client / router / trader in turn
-            checkClients();
-            checkRouters();
-            checkTrader();
+            if(!clients.isEmpty())
+            {
+                System.out.println("In mainLogic, clients is not empty.");
+                checkClients();
+            }
+            if(orderRouters.length != 0)
+            {
+//                System.out.println("In mainLogic, orderRouters is not empty.");
+                checkRouters();
+            }
+            if(trader.isConnected())
+            {
+//                System.out.println("In mainLogic, trader is connected.");
+                checkTrader();
+            }
         }
     }
 
@@ -157,11 +186,8 @@ public class OrderManager {
         Checks the messages for all clients
         Creates a new order if order requests received.
     */
-    private void checkClients() {
-
-
-
-        int clientId;
+    private void checkClients()
+    {
         Socket client;
         ObjectInputStream is;
         ArrayList<Object> args;
@@ -169,14 +195,16 @@ public class OrderManager {
 
 
         // Iterating over each client
-        for (clientId = 0; clientId < this.clients.length; clientId++) {
-            client = this.clients[clientId];
-
-//            System.out.println("Going through clients");
-
+        for(Socket client0: clients)
+        {
+            client = client0;
             try {
+
+
                 // Check if there is any new data
                 if (0 < client.getInputStream().available()) {
+
+                    System.out.println("got a message");
 
                     is = new ObjectInputStream(client.getInputStream()); //create an object inputstream, this is a pretty stupid way of doing it, why not create it once rather than every time around the loop
                     String method = (String) is.readObject();
@@ -185,7 +213,7 @@ public class OrderManager {
                         // If a new order single, we want to create a new Order object
                         case "newOrderSingle":
                             args = new ArrayList<>();
-                            args.add(clientId);
+                            args.add(clients.indexOf(client0));
                             args.add(is.readInt());
                             args.add(is.readObject());
 
@@ -356,7 +384,8 @@ public class OrderManager {
 
         try {
             // If there is any messages from the trader
-            if (0 < this.trader.getInputStream().available()) {
+            if (0 < this.trader.getInputStream().available())
+            {
                 is = new ObjectInputStream(this.trader.getInputStream());
                 String method = (String) is.readObject();
                 logger.info(Thread.currentThread().getName() + " calling " + method);
@@ -397,7 +426,7 @@ public class OrderManager {
 
         // If not then the order must be new
         o.OrdStatus = '0';
-        ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.clientid].getOutputStream());
+        ObjectOutputStream os = new ObjectOutputStream(clients.get((int)o.clientid).getOutputStream());
 
         // Write acknowledgement to the client
         generateMessage(os, (int)o.clientOrderID, 'A', 'D', o.side);
@@ -527,7 +556,7 @@ public class OrderManager {
     private void cancelOrder(int orderID) {
         Order o = orders.get(orderID);
         try {
-            ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.clientid].getOutputStream());
+            ObjectOutputStream os = new ObjectOutputStream(clients.get((int) o.clientid).getOutputStream());
 
             if (o.OrdStatus == '0')
             {
@@ -582,8 +611,9 @@ public class OrderManager {
     private void cancelSuccess(int orderID, int sliceID)
     {
         Order o = orders.get(orderID);
-        try {
-            ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.clientid].getOutputStream());
+        try
+        {
+            ObjectOutputStream os = new ObjectOutputStream(clients.get((int) o.clientid).getOutputStream());
             generateMessage(os, (int)o.clientOrderID, '4', '9', o.side);
             os.flush();
         }

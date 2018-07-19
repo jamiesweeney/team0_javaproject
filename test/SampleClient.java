@@ -4,6 +4,7 @@ import java.io.ObjectOutputStream;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.channels.SocketChannel;
 import java.util.HashMap;
 import java.util.Random;
 
@@ -30,7 +31,7 @@ public class SampleClient extends Mock implements Client
 
 	private int id = 0; //message id number
 
-	private Socket omConn; //connection to order manager
+	private SocketChannel omConn; //connection to order manager
 
 
 	private Logger logger = Logger.getLogger(SampleClient.class);
@@ -49,28 +50,28 @@ public class SampleClient extends Mock implements Client
 		}
 	}
 
-	public SampleClient(int port) throws IOException
-	{
-		PropertyConfigurator.configure("resources/log4j.properties");
+//	public SampleClient(int port) throws IOException
+//	{
+//		PropertyConfigurator.configure("resources/log4j.properties");
+//
+//		//OM will connect to us
+//		omConn=new ServerSocket(port).accept();
+//		logger.info("OM connected to client port "+port);
+//	}
 
-		//OM will connect to us
-		omConn=new ServerSocket(port).accept();
-		logger.info("OM connected to client port "+port);
-	}
 
-
-	public Socket connect(InetSocketAddress serverSocket)
+	public SocketChannel connect(InetSocketAddress serverSocket)
 	{
 		//Replication of OM connector code.
 		//Attempt to connect 200 times before returning an error.
 		int tryCounter = 0;
-		Socket s = null;
+		SocketChannel s = null;
 		while(tryCounter < 200)
 		{
 			try
 			{
-				s = new Socket(serverSocket.getHostName(), serverSocket.getPort());
-				s.setKeepAlive(true);
+				s = SocketChannel.open();
+				s.connect(new InetSocketAddress("localhost", 2025));
 				break;
 			}
 			catch(IOException e)
@@ -106,7 +107,7 @@ public class SampleClient extends Mock implements Client
 		// newOrderSingle; 35=D; id; nos;
 		if(omConn.isConnected())
 		{
-			ObjectOutputStream os=new ObjectOutputStream(omConn.getOutputStream());
+			ObjectOutputStream os=new ObjectOutputStream(omConn.socket().getOutputStream());
 			os.writeObject("newOrderSingle");
 			//os.writeObject("35=D;"); TODO - Work out why this crashes
 			os.writeInt(id);
@@ -134,7 +135,7 @@ public class SampleClient extends Mock implements Client
         // newOrderSingle; 35=D; id; nos;
 		if(omConn.isConnected())
 		{
-			ObjectOutputStream os=new ObjectOutputStream(omConn.getOutputStream());
+			ObjectOutputStream os=new ObjectOutputStream(omConn.socket().getOutputStream());
 			os.writeObject("newOrderSingle");
 			//os.writeObject("35=D;"); TODO - Work out why this crashes
 			os.writeInt(id);
@@ -150,7 +151,7 @@ public class SampleClient extends Mock implements Client
 		if (omConn.isConnected()) {
 			// OMconnection.sendMessage("cancel",idToCancel);
 			try {
-				ObjectOutputStream os = new ObjectOutputStream(omConn.getOutputStream());
+				ObjectOutputStream os = new ObjectOutputStream(omConn.socket().getOutputStream());
 				os.writeObject("sendCancel");
 				os.writeInt(idToCancel);
 				os.flush();
@@ -191,9 +192,9 @@ public class SampleClient extends Mock implements Client
 			while(true)
 			{
 				//is.wait(); //this throws an exception!!
-				while(0<omConn.getInputStream().available())
+				while(0<omConn.socket().getInputStream().available())
 				{
-					is = new ObjectInputStream(omConn.getInputStream());
+					is = new ObjectInputStream(omConn.socket().getInputStream());
 
 					String fix=(String)is.readObject();
 

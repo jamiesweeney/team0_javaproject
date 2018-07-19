@@ -3,6 +3,7 @@ package OrderClient;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.nio.channels.SocketChannel;
 
 import OrderManager.Order;
 import Ref.Instrument;
@@ -23,7 +24,7 @@ public interface Client{
 	/**
 	 * @author: Oliver Morrison
 	 * */
-	Socket connect(InetSocketAddress serverSocket);
+	SocketChannel connect(InetSocketAddress serverSocket);
 
 	
 	//Incoming messages
