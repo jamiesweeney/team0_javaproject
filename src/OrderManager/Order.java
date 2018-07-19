@@ -5,6 +5,11 @@ import java.util.ArrayList;
 
 import Ref.Instrument;
 
+
+/**
+ *<h1>Order</h1>
+ * The order class implements Serializable and is used as the standard format for orders.
+ * */
 public class Order implements Serializable {
 
     // Instance variables
@@ -162,18 +167,30 @@ public class Order implements Serializable {
         //state=cancelled
     }
 }
-
+/**
+ * <h1>Basket</h1>
+ * Basket is a simple class that just contains an array of Orders.
+ * */
 class Basket
 {
     Order[] orders;
 }
 
+
+/**
+ * <h1>Fill</h1>
+ *
+ * The Fill class just holds size and price data.
+ * */
 class Fill implements Serializable
 {
     //long id;
     long size;
     double price;
 
+    /**
+     * The Fill constructor takes in 2 arguments
+     * */
     Fill(long size, double price)
     {
         this.size = size;

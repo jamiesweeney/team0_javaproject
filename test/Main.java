@@ -10,6 +10,17 @@ import org.apache.log4j.PropertyConfigurator ;
 import LiveMarketData.LiveMarketData;
 import OrderManager.OrderManager;
 
+
+/**
+* <h1>Main</h1>
+ * The Main class implements the main() method, which is that starting point of the application.
+ * <p>
+ *  In the main() method, several Client objects are created, as well as Router objects and a Trader.
+ *  These objects are linked to a unique InetSocketAddress, which is used by the objects to communicate
+ *  and transfer data.
+ *  <p>
+ *  Lastly, sample market data is created, and an OrderManager is created.
+*/
 public class Main
 {
 	public static void main(String[] args) throws IOException
@@ -22,8 +33,10 @@ public class Main
 		logger.info("TEST: this program tests OrderManager");
 
 		//start sample clients
-		new MockClient("Client 1",2000).start();
-		new MockClient("Client 2",2001).start();
+		//new MockClient("Client 1",2000).start();
+		//new MockClient("Client 2",2001).start();
+
+		new MockClient("Client 3").start();
 
 		//start sample routers
 		new SampleRouter("Router LSE",2010).start();
@@ -42,12 +55,15 @@ public class Main
 
 		LiveMarketData liveMarketData = new SampleLiveMarketData();
 
-		new MockOM("Order Manager",routers,clients,trader,liveMarketData).start();
+		//new MockOM("Order Manager",routers,clients,trader,liveMarketData).start();
+		new MockOM("MockOM").start();
 	}
 }
 
 
-
+/**
+ * The MockClient class is used to simulate an actual client and is used for program testing.
+ * */
 
 class MockClient extends Thread
 {
@@ -55,19 +71,29 @@ class MockClient extends Thread
 
 	int port;
 
+	MockClient(String name)
+	{
+		this.setName(name);
+	}
+
 	MockClient(String name,int port)
 	{
 		this.port=port;
 		this.setName(name);
 	}
 
+
+	/**
+	 *The run() method is implemented as teh class extends Thread. This method creates a new Client object, which sends orders to the
+	 * OrderManager. The code has been modified to allow the client to send either a random order or a specific order by inputting manual values.
+	 * */
 	public void run()
 	{
 		try
 		{
 			PropertyConfigurator.configure("resources/log4j.properties");
-
-			SampleClient client=new SampleClient(port);
+			SampleClient client = new SampleClient();
+			//SampleClient client=new SampleClient(port);
 
 			if(port==2000)
 			{
@@ -101,7 +127,9 @@ class MockClient extends Thread
 
 
 
-
+/**
+ * The MockOM class extends Thread anf is used to initialise an OrderManager object for testing.
+ * */
 class MockOM extends Thread
 {
 	private Logger logger = Logger.getLogger(MockOM.class);
@@ -123,6 +151,10 @@ class MockOM extends Thread
 		this.routers=routers;
 		this.trader=trader;
 		this.liveMarketData=liveMarketData;
+		this.setName(name);
+	}
+	MockOM(String name)
+	{
 		this.setName(name);
 	}
 
