@@ -1,117 +1,133 @@
 package TradeScreen;
-
 import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.geometry.Insets;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Tab;
-import javafx.scene.control.TabPane;
-import javafx.scene.control.TextArea;
-import javafx.scene.text.Text;
+import javafx.scene.control.*;
+import javafx.scene.layout.GridPane;
+import javafx.scene.text.*;
 import javafx.stage.Stage;
-
-import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.lang.String;
-
+import java.net.Socket;
+import java.util.ArrayList;
 import OrderManager.Order;
 
-public class Screen extends Application implements TradeScreen
+public class Screen extends Application implements Runnable
 {
-    Button button;
-    //Tab tabs;
+    static String name;
+    static int port;
+    private static Socket omConn;
 
-    public void mainScreen(){
+    Text text;
+    Button buttonorder1;
+    Button buttonorder2;
+    Button buttonorder3;
+    Button buttonorder4;
+    Button buttonorder5;
+    Label statusLabel;
+    Button button;
+    Button button2;
+
+    ObjectInputStream is;
+
+    ObjectOutputStream os;
+
+    TraderLogic trader;
+    ArrayList<Order> orders = new ArrayList<>();
+    ArrayList<Button> buttons = new ArrayList<>();
+
+    // Do not remove this
+    public Screen () {}
+
+    public Screen (String name,int port) {
+        this.name = name;
+        this.port = port;
+    }
+
+    public void run (){
         launch();
     }
 
-    public void start(Stage primaryStage) {
-        setUserAgentStylesheet(STYLESHEET_MODENA);
+    @Override
+    public void start(Stage primaryStage){
 
-        TabPane tabs = new TabPane();
+        statusLabel = new Label();
+        text =new Text("Order Information");
 
-        Tab orderNew = new Tab();
-        orderNew.setText("New Order");
-        orderNew.setContent(newOrderButton());
+        buttonorder1 = new Button("Empty");
+        buttonorder2 = new Button("Empty");
+        buttonorder3 = new Button("Empty");
+        buttonorder4 = new Button("Empty");
+        buttonorder5 = new Button("Empty");
+        buttons.add(buttonorder1);
+        buttons.add(buttonorder2);
+        buttons.add(buttonorder3);
+        buttons.add(buttonorder4);
+        buttons.add(buttonorder5);
 
-        Tab orderAccept = new Tab();
-        orderAccept.setText("Accept Order");
-        orderAccept.setContent(acceptOrder());
+        button = new Button("Accept");
+        button2 = new Button("Slice");
 
-        Tab slice = new Tab();
-        slice.setText("Slice");
-        slice.setContent(slice());
+        // Grid Pane stuff
+        GridPane gridPane = new GridPane();
+        gridPane.setPadding(new Insets(0, 0, 0, 0));
+        gridPane.setHgap(10);
+        gridPane.setVgap(30);
+        gridPane.add(text, 3,1);
+        gridPane.add(buttonorder1, 10,0,6,2);
+        gridPane.add(buttonorder2, 10,1,6,2);
+        gridPane.add(buttonorder3, 10,2,6,2);
+        gridPane.add(buttonorder4, 10,3,6,2);
+        gridPane.add(buttonorder5, 10,4,6,2);
+        gridPane.add(button, 1,4,3,1);
+        gridPane.add(button2, 4,4,3,1);
+        gridPane.add(statusLabel, 0, 0,2, 1);
 
-        Tab price = new Tab();
-        price.setText("Price");
-        price.setContent(price());
-
-        tabs.getTabs().addAll(orderNew, orderAccept, slice, price);
-
-        //StackPane layout = new StackPane();
-        //layout.getChildren().add(button);
-        Scene scene = new Scene(tabs, 510, 401);
+        Scene scene = new Scene(gridPane, 400, 300);
         primaryStage.setTitle("Trader Screen");
-        //tab = new Tab("New Order");
         primaryStage.setScene(scene);
         primaryStage.show();
+        startTask();
     }
 
-    public Button newOrderButton() {
+    public void startTask() {
+        Runnable task = () -> {
+            trader = new TraderLogic(name, port);
+            trader.setScreen(this);
+            Thread backgroundThread = new Thread(trader);
+            backgroundThread.setDaemon(true);
+            backgroundThread.start();
+            //runTask();
+        };
+        Thread backgroundThread = new Thread(task);
+        backgroundThread.setDaemon(true);
+        backgroundThread.start();
+    }
+//    public void runTask() {
+//        for (int i = 1; i <= 5; i++) {
+//            final String status = "Hello " + name;
+//            Platform.runLater(() -> {
+//                statusLabel.setText(status);
+//                button.setOnAction(event -> text.setText("Button Pressed"));
+//            });
+//        }
+//    }
 
-        NewOrderHandler newOrderHandler = new NewOrderHandler();
-        button = new Button("New Order");
-        button.setOnAction(e -> newOrderHandler.setup(id, order));
-        Text textArea = new Text();
-        textArea.setText("ID: " + id + "Order: " + order);
-        return button;
+    private void updateButtons(Order order) {
+        int index;
+        if ((index = orders.indexOf(order)) < 5) {
+            System.out.println(index);
+            Button button = buttons.get(index);
+            Platform.runLater(() -> {
+                button.setText("" + order.id);
+            });
+        }
     }
 
-    public Button newOrder(int id, Order order) {
-
-        NewOrderHandler newOrderHandler = new NewOrderHandler();
-        button = new Button("New Order");
-        button.setOnAction(e -> newOrderHandler.setup(id, order));
-        Text textArea = new Text();
-        textArea.setText("ID: " + id + "Order: " + order);
-        return button;
+    public void addOrder(Order order) {
+        orders.add(order);
+        updateButtons(order);
     }
-
-    @Override
-    public void acceptOrder(int id) throws IOException {
-
-    }
-
-    @Override
-    public void sliceOrder(int id, int sliceSize) throws IOException {
-
-    }
-
-    @Override
-    public void price(int id, Order o) throws InterruptedException, IOException {
-
-    }
-
-    private Button acceptOrder() {
-
-        button = new Button("Accept Order");
-        button.setOnAction(e -> System.out.println("Accepted"));
-
-        return button;
-    }
-
-    private Button slice() {
-        button = new Button("Slice");
-        button.setOnAction(e -> System.out.println("Sliced"));
-        return button;
-
-    }
-    private Button price() {
-        button = new Button("Price");
-        button.setOnAction(e -> System.out.println("Priced"));
-
-        return button;
-    }
-
-
 }
-
-

@@ -5,6 +5,8 @@ import java.util.logging.Logger;
 
 import LiveMarketData.LiveMarketData;
 import OrderManager.OrderManager;
+import TradeScreen.Screen;
+import TradeScreen.TraderLogic;
 
 public class Main
 {
@@ -19,8 +21,10 @@ public class Main
 		//start sample routers
 		new SampleRouter("Router LSE",2010).start();
 		new SampleRouter("Router BATE",2011).start();
-	
-		new Trader("Trader James",2020).start();
+
+		Thread a = new Thread(new Screen("Trader James", 2020),"Thread x");
+		a.start();
+        //new Screen("Trader James", 2020).start();
 		//start order manager
 		InetSocketAddress[] clients = {new InetSocketAddress("localhost",2000),
 				                       new InetSocketAddress("localhost",2001)};
@@ -35,9 +39,6 @@ public class Main
 		new MockOM("Order Manager",routers,clients,trader,liveMarketData).start();
 	}
 }
-
-
-
 
 class MockClient extends Thread
 {
