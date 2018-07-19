@@ -24,7 +24,7 @@ public interface Client{
 	/**
 	 * @author: Oliver Morrison
 	 * */
-	SocketChannel connect(InetSocketAddress serverSocket);
+	void connect(InetSocketAddress serverSocket);
 
 	
 	//Incoming messages

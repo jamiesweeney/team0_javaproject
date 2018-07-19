@@ -15,6 +15,8 @@ import java.io.ObjectOutputStream;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.*;
@@ -179,14 +181,13 @@ public class OrderManager {
             }
         }
     }
-
     /*
         Checks the messages for all clients
         Creates a new order if order requests received.
     */
     private void checkClients()
     {
-        System.out.println("Entered check clients in OrderManager.");
+        //System.out.println("Entered check clients in OrderManager.");
         //Socket client;
         ObjectInputStream is;
         ArrayList<Object> args;
@@ -195,16 +196,23 @@ public class OrderManager {
 
         // Iterating over each client
         for(SocketChannel client: clients) {
-           System.out.println(client.toString() + "is being processed by the for loop.");
+           //System.out.println(client.toString() + "is being processed by the for loop.");
 
             try {
                 // Check if there is any new data
-                if (0 < client.socket().getInputStream().available()) {
+                ByteBuffer buffer = ByteBuffer.allocate(64);
+                client.read(buffer);
+                String incomingMsg = new String(buffer.array());
+
+                System.out.println("Reading from server: " + incomingMsg);
+
+
+                if (0 < client.socket().getInputStream().available())
+                {
                     System.out.println("OrderManager:checkClients(), client input stream available.");
 
                     is = new ObjectInputStream(client.socket().getInputStream()); //create an object inputstream, this is a pretty stupid way of doing it, why not create it once rather than every time around the loop
                     String method = (String) is.readObject();
-
                     switch (method) {
                         // If a new order single, we want to create a new Order object
                         case "newOrderSingle":
@@ -232,6 +240,7 @@ public class OrderManager {
                             break;
                     }
                 }
+
             } catch (IOException e) {
                 // TODO - TEAM 15
                 logger.error("IOException detected: " + e);
@@ -241,8 +250,6 @@ public class OrderManager {
                 logger.error("ClassNotFoundException detected: " + e);
                 e.printStackTrace();
             }
-
-
         }
     }
 
