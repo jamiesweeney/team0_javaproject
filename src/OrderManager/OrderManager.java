@@ -558,7 +558,7 @@ public class OrderManager {
 
         int minIndex = 0;
         double minPrice = o.bestPrices[0];
-        for (int i = 0; i < o.bestPrices.length; i++) {
+        for (int i = 1; i < o.bestPrices.length; i++) {
             if (minPrice > o.bestPrices[i]) {
                 minIndex = i;
                 minPrice = o.bestPrices[i];
@@ -570,7 +570,7 @@ public class OrderManager {
     {
         int maxIndex = 0;
         double maxPrice = o.bestPrices[0];
-        for (int i = 0; i < o.bestPrices.length; i++) {
+        for (int i = 1; i < o.bestPrices.length; i++) {
             if (maxPrice < o.bestPrices[i]) {
                 maxIndex = i;
                 maxPrice = o.bestPrices[i];
