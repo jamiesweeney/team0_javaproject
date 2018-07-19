@@ -14,8 +14,13 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.SynchronousQueue;
 
 public class OrderManager {
 
@@ -23,12 +28,16 @@ public class OrderManager {
     private static LiveMarketData liveMarketData;
     // Instance variables
     private Logger logger = Logger.getLogger(OrderManager.class);
-    private HashMap<Integer, Order> orders = new HashMap<Integer, Order>(); //debugger will do this line as it gives state to the object
+    protected HashMap<Integer, Order> orders = new HashMap<Integer, Order>(); //debugger will do this line as it gives state to the object
     //currently recording the number of new order messages we get. TODO why? use it for more?
     private int id = 0; //debugger will do this line as it gives state to the object
-    private Socket[] orderRouters;
-    private Socket[] clients;
-    private Socket trader;
+    protected Socket[] orderRouters;
+    protected Socket[] clients;
+    protected Socket trader;
+
+
+    protected Queue<OrderJob> clientQueue;
+
 
 
     // Constructor
@@ -36,6 +45,8 @@ public class OrderManager {
                         InetSocketAddress[] clients,
                         InetSocketAddress trader,
                         LiveMarketData liveMarketData) {
+
+        System.out.println("IS this even working");
         PropertyConfigurator.configure("resources/log4j.properties");
         OrderManager.liveMarketData = liveMarketData;
 
@@ -47,6 +58,9 @@ public class OrderManager {
     }
 
     private void setup(InetSocketAddress[] orderRouters, InetSocketAddress[] clients, InetSocketAddress trader) {
+        System.out.println("IS this even working");
+
+
 
         // Set up trader connection
         this.trader = connect(trader);
@@ -64,6 +78,14 @@ public class OrderManager {
         for (InetSocketAddress location : clients) {
             this.clients[i++] = connect(location);
         }
+
+        // Set up incoming messages queues
+        clientQueue = new LinkedBlockingQueue<>();
+
+        // Initiate our message handling threads
+        Thread t = new Thread(new ClientWorkerThread(clientQueue ,this));
+        t.start();
+        System.out.println("IS this even working");
     }
 
 
@@ -95,6 +117,7 @@ public class OrderManager {
         - Checks trader messages
      */
     private void mainLogic() {
+//        System.out.println("sajsa");
 
         // Constantly check for messages
         while (true) {
@@ -111,13 +134,21 @@ public class OrderManager {
         Creates a new order if order requests received.
     */
     private void checkClients() {
+
+
+
         int clientId;
         Socket client;
         ObjectInputStream is;
+        ArrayList<Object> args;
+        OrderJob job;
+
 
         // Iterating over each client
         for (clientId = 0; clientId < this.clients.length; clientId++) {
             client = this.clients[clientId];
+
+//            System.out.println("Going through clients");
 
             try {
                 // Check if there is any new data
@@ -125,23 +156,30 @@ public class OrderManager {
 
                     is = new ObjectInputStream(client.getInputStream()); //create an object inputstream, this is a pretty stupid way of doing it, why not create it once rather than every time around the loop
                     String method = (String) is.readObject();
-                    logger.info(Thread.currentThread().getName() + " calling " + method);
-                    // Determine the message type
+
                     switch (method) {
                         // If a new order single, we want to create a new Order object
                         case "newOrderSingle":
-                            newOrder(clientId, is.readInt(), (NewOrderSingle) is.readObject());
+                            args = new ArrayList<>();
+                            args.add(clientId);
+                            args.add(is.readInt());
+                            args.add(is.readObject());
+
+                            job = new OrderJob(method, args);
+
+                            clientQueue.add(job);
+                            System.out.println(job.toString());
                             break;
+
                         case "sendCancel":
-                            int id = is.readInt();
-                            Order o = orders.get(id);
-                            if (o.routeCode == 0) {
-                                cancelOrder(id);
-                            }
-                            if (o.routeCode == 2) {
-                                sendCancel(o, orderRouters[o.routerID]);
-                            }
+                            args = new ArrayList<>();
+                            args.add(is.readInt());
+
+                            job = new OrderJob(method, args);
+
+                            clientQueue.add(job);
                             break;
+
                         //TODO create a default case which errors with "Unknown message type"+...
                         default:
                             logger.error("Error, unknown mesage type: " + method);
@@ -157,31 +195,22 @@ public class OrderManager {
                 logger.error("ClassNotFoundException detected: " + e);
                 e.printStackTrace();
             }
+
+
         }
     }
 
-    /*
-        Deals with new order requests from the client
-    */
-    private void newOrder(int clientId, int clientOrderId, NewOrderSingle nos) throws IOException {
+
+    public synchronized int addOrder(int clientId, int clientOrderId, NewOrderSingle nos){
 
         // Create the new order and add to the order array
+        int new_id = id++;
         Order order = new Order(clientId, clientOrderId, nos.instrument, nos.size, nos.side);
-        orders.put(id, order);
+        orders.put(new_id, order);
+        return new_id;
 
-        // Send a message to the client
-        ObjectOutputStream os = new ObjectOutputStream(clients[clientId].getOutputStream());
-
-
-        generateMessage(os, clientOrderId, 'A', 'D', nos.side);
-
-        os.flush();
-
-        // Send this order to the trading screen
-        sendOrderToTrader(id, orders.get(id), TradeScreen.api.newOrder);
-
-        id++;
     }
+
 
     /*
         Sends a new order to the trader through an output stream
@@ -376,6 +405,8 @@ public class OrderManager {
         If the trader requested a slice for the new order
     */
     private void sliceOrder(int id, int sliceSize) throws IOException {
+        System.err.println("1798ojlkfdslkjfdslknfds");
+
         Order o = orders.get(id);
 
         //Order has a list of slices, and a list of fills, each slice is a child order and each fill is associated with either a child order or the original order
@@ -473,7 +504,7 @@ public class OrderManager {
         order.bestPriceCount = 0;
     }
 
-    //TODO - implement this
+    //TODO - ensure this works properly with david
     private void cancelOrder(int orderID) {
         Order o = orders.get(orderID);
         try {
