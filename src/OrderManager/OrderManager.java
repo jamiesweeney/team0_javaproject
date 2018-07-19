@@ -225,12 +225,14 @@ public class OrderManager {
                             break;
 
                         case "sendCancel":
+
                             args = new ArrayList<>();
                             args.add(is.readInt());
 
                             job = new OrderJob(method, args);
 
                             clientQueue.add(job);
+
                             break;
 
                         default:
@@ -312,11 +314,11 @@ public class OrderManager {
                             int orderId = is.readInt();
                             int sliceId = is.readInt();
 
-                            Order slice = orders.get(orderId).slices.get(sliceId);
-                            slice.bestPrices[routerId] = is.readDouble();
-                            slice.bestPriceCount += 1;
-
-                            if (slice.bestPriceCount == slice.bestPrices.length)
+                            Order slice = orders.get(orderId).getSlices().get(sliceId);
+                            slice.getBestPrices()[routerId] = is.readDouble();
+                            //slice.bestPriceCount += 1;
+                            slice.setBestPriceCount(slice.getBestPriceCount() + 1);
+                            if (slice.getBestPriceCount() == slice.getBestPrices().length)
                                 reallyRouteOrder(sliceId, slice);
                             break;
                         case "orderCancelled":
@@ -351,23 +353,22 @@ public class OrderManager {
     */
     private void reallyRouteOrder(int sliceId, Order o) throws IOException {
 
-
         // Iterate over prices and find minimum
         // Route to the minimum
-        if (o.side == 1)//if buying the stock
+        if (o.getSide() == 1)//if buying the stock
         {
-            o.routerID = findPurchaseRoute(o);
+            o.setRouterID(findPurchaseRoute(o));
         }
-        else if(o.side == 2)//if selling the stock
+        else if(o.getSide() == 2)//if selling the stock
         {
-            o.routerID = findSalesRoute(o);
+            o.setRouterID(findSalesRoute(o));
         }
-        ObjectOutputStream os = new ObjectOutputStream(orderRouters[o.routerID].getOutputStream());
+        ObjectOutputStream os = new ObjectOutputStream(orderRouters[o.getRouterID()].getOutputStream());
         os.writeObject(Router.api.routeOrder);
-        os.writeInt((int) o.id);
+        os.writeInt((int) o.getOmID());
         os.writeInt(sliceId);
         os.writeInt((int) o.sizeRemaining());
-        os.writeObject(o.instrument);
+        os.writeObject(o.getInstrument());
         os.flush();
     }
 
@@ -378,7 +379,7 @@ public class OrderManager {
      */
     private void newFill(int id, int sliceId, int size, double price) throws IOException {
         Order o = orders.get(id);
-        o.slices.get(sliceId).createFill(size, price);
+        o.getSlices().get(sliceId).createFill(size, price);
 
         // If there is nothing left write to database
         if (o.sizeRemaining() == 0) {
@@ -432,17 +433,17 @@ public class OrderManager {
         Order o = orders.get(id);
 
         // If the order is pending new, order has already been accepted
-        if (o.OrdStatus != 'A') {
+        if (o.getOrdStatus() != 'A') {
             logger.error("Error accepting order that has already been accepted");
             return;
         }
 
         // If not then the order must be new
-        o.OrdStatus = '0';
-        ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.clientid].getOutputStream());
+        o.setOrdStatus('0');
+        ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.getClientID()].getOutputStream());
 
         // Write acknowledgement to the client
-        generateMessage(os, (int)o.clientOrderID, '2', '8', o.side);
+        generateMessage(os, (int)o.getClientOrderID(), '2', '8', o.getSide());
         os.flush();
 
         // price the order
@@ -479,16 +480,16 @@ public class OrderManager {
 
         // If valid slice, create a new slice
         int sliceId = o.newSlice(sliceSize);
-        Order slice = o.slices.get(sliceId);
+        Order slice = o.getSlices().get(sliceId);
 
         // Do internal cross with slice
         internalCross(id, slice);
-        int sizeRemaining = (int) o.slices.get(sliceId).sizeRemaining();
+        int sizeRemaining = (int) o.getSlices().get(sliceId).sizeRemaining();
 
         // If the internal cross does not satisfy then route to exchange
         if (sizeRemaining > 0) {
             routeOrder(id, sliceId, sizeRemaining, slice);
-            o.routeCode = 2;
+            o.setRouteCode(2);
         }
     }
 
@@ -512,15 +513,15 @@ public class OrderManager {
                 continue;
 
                 // Don't include non equal instruments
-            } else if (!(matchingOrder.instrument.equals(o.instrument))) {
+            } else if (!(matchingOrder.getInstrument().equals(o.getInstrument()))) {
                 continue;
 
                 // Don't include non matching prices
-            } else if (!(matchingOrder.initialMarketPrice == o.initialMarketPrice)) {
+            } else if (!(matchingOrder.getInitialMarketPrice() == o.getInitialMarketPrice())) {
                 continue;
 
                 // Don't include orders with same side
-            } else if ((matchingOrder.side == o.side)) {
+            } else if ((matchingOrder.getSide() == o.getSide())) {
                 continue;
             }
 
@@ -556,14 +557,14 @@ public class OrderManager {
             os.writeObject(Router.api.priceAtSize);
             os.writeInt(id);
             os.writeInt(sliceId);
-            os.writeObject(order.instrument);
+            os.writeObject(order.getInstrument());
             os.writeInt((int) order.sizeRemaining());
             os.flush();
         }
 
         // need to wait for these prices to come back before routing
-        order.bestPrices = new double[orderRouters.length];
-        order.bestPriceCount = 0;
+        order.setBestPrices(new double[orderRouters.length]);
+        order.setBestPriceCount(0);
     }
 
     /**
@@ -574,29 +575,28 @@ public class OrderManager {
     private void cancelOrder(int orderID) {
         Order o = orders.get(orderID);
         try {
-            ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.clientid].getOutputStream());
-
-            if (o.OrdStatus == '0')
+            ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.getClientID()].getOutputStream());
+            if (o.getOrdStatus() == '0')
             {
                 orders.remove(orderID);
-                generateMessage(os, (int)o.clientOrderID, '4','F',o.side);
+                generateMessage(os, (int)o.getClientOrderID(), '4','F',o.getSide());
                 os.flush();
             }
-            else if (o.OrdStatus == '2') {
-                generateMessage(os, (int)o.clientOrderID, '8', '9', o.side);
+            else if (o.getOrdStatus() == '2') {
+                generateMessage(os, (int)o.getClientOrderID(), '8', '9', o.getSide());
                 os.flush();
             } else {
                 int rmvdContent = 0;
                 int filledCount = 0;
-                for (Order slice : o.slices) {
-                    if (slice.OrdStatus == '2') {
+                for (Order slice : o.getSlices()) {
+                    if (slice.getOrdStatus() == '2') {
                         filledCount++;
-                    } else if (slice.OrdStatus == '0') {
-                        o.slices.remove(slice);
+                    } else if (slice.getOrdStatus() == '0') {
+                        o.getSlices().remove(slice);
                         rmvdContent++;
                     }
                 }
-                generateMessage(os, (int)o.clientOrderID, '4', 'F', o.side);
+                generateMessage(os, (int)o.getClientOrderID(), '2', '9', o.getSide());
                 os.flush();
             }
         } catch (IOException e) {
@@ -614,11 +614,11 @@ public class OrderManager {
         try {
             ObjectOutputStream os;
             os = new ObjectOutputStream(routerSocket.getOutputStream());
-            for (int i = 0; i < order.slices.size(); i++) {
+            for (int i = 0; i < order.getSlices().size(); i++) {
                 os.writeObject(Router.api.sendCancel);
-                os.writeInt((int)order.id);
+                os.writeInt((int)order.getOmID());
                 os.writeInt(i);
-                os.writeObject(order.instrument);
+                os.writeObject(order.getInstrument());
                 //os.writeInt((int) order.sizeRemaining());
                 os.flush();
             }
@@ -637,8 +637,8 @@ public class OrderManager {
     {
         Order o = orders.get(orderID);
         try {
-            ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.clientid].getOutputStream());
-            generateMessage(os, (int)o.clientOrderID, '4', '9', o.side);
+            ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.getClientID()].getOutputStream());
+            generateMessage(os, (int)o.getClientOrderID(), '4', '9', o.getSide());
             os.flush();
         }
         catch (IOException e)
@@ -671,11 +671,11 @@ public class OrderManager {
     {
 
         int minIndex = 0;
-        double minPrice = o.bestPrices[0];
-        for (int i = 1; i < o.bestPrices.length; i++) {
-            if (minPrice > o.bestPrices[i]) {
+        double minPrice = o.getBestPrices()[0];
+        for (int i = 1; i < o.getBestPrices().length; i++) {
+            if (minPrice > o.getBestPrices()[i]) {
                 minIndex = i;
-                minPrice = o.bestPrices[i];
+                minPrice = o.getBestPrices()[i];
             }
         }
         return minIndex;
@@ -688,11 +688,11 @@ public class OrderManager {
     private int findSalesRoute(Order o)
     {
         int maxIndex = 0;
-        double maxPrice = o.bestPrices[0];
-        for (int i = 1; i < o.bestPrices.length; i++) {
-            if (maxPrice < o.bestPrices[i]) {
+        double maxPrice = o.getBestPrices()[0];
+        for (int i = 1; i < o.getBestPrices().length; i++) {
+            if (maxPrice < o.getBestPrices()[i]) {
                 maxIndex = i;
-                maxPrice = o.bestPrices[i];
+                maxPrice = o.getBestPrices()[i];
             }
         }
         return maxIndex;

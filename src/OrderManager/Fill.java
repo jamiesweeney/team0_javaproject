@@ -7,8 +7,8 @@ import java.io.Serializable;
  *
  * The Fill class just holds size and price data.
  * */
-class Fill implements Serializable
-{
+public class Fill implements Serializable {
+
     //long id;
     long size;
     double price;

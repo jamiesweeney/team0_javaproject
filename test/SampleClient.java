@@ -31,6 +31,8 @@ public class SampleClient extends Mock implements Client {
 
 	private Socket omConn; //connection to order manager
 	private Order currentOrder;
+    private int orderID;
+    private  int clientPort;
 
 	private Logger logger = Logger.getLogger(SampleClient.class);
 
@@ -47,7 +49,7 @@ public class SampleClient extends Mock implements Client {
 
 	public SampleClient(int port) throws IOException {
 		PropertyConfigurator.configure("resources/log4j.properties");
-
+        clientPort = port;
 		//OM will connect to us
 		omConn = new ServerSocket(port).accept();
 		logger.info("OM connected to client port " + port);
@@ -151,13 +153,13 @@ public class SampleClient extends Mock implements Client {
 	@Override
 	public void fullyFilled(Order order) {
 		show("" + order);
-		OUT_QUEUE.remove(order.clientOrderID);
+		OUT_QUEUE.remove(order.getClientOrderID());
 	}
 
 	@Override
 	public void cancelled(Order order) {
 		show("" + order);
-		OUT_QUEUE.remove(order.clientOrderID);
+		OUT_QUEUE.remove(order.getClientOrderID());
 	}
 
 	enum methods {newOrderSingleAcknowledgement, dontKnow, orderCancellationSuccessful, orderCancellationRejected}

@@ -85,13 +85,13 @@ public class ClientWorkerThread implements Runnable{
                             Order o = om.orders.get(id);
 
                             // cancel if the order has not been routed
-                            if (o.routeCode == 0) {
+                            if (o.getRouteCode() == 0) {
                                 cancelOrder(id);
                             }
 
                             // send a cancel request to the router if the order has been routed
-                            if (o.routeCode == 2) {
-                                sendCancel(o, om.orderRouters[o.routerID]);
+                            if (o.getRouteCode() == 2) {
+                                sendCancel(o, om.orderRouters[o.getRouterID()]);
                             }
                             break;
 
@@ -150,28 +150,28 @@ public class ClientWorkerThread implements Runnable{
     private void cancelOrder(int orderID) {
         Order o = om.orders.get(orderID);
         try {
-            ObjectOutputStream os = new ObjectOutputStream(om.clients[(int) o.clientid].getOutputStream());
+            ObjectOutputStream os = new ObjectOutputStream(om.clients[(int) o.getClientID()].getOutputStream());
 
             // If the order has been fufilled, send rejected cancel message
-            if (o.OrdStatus == '2') {
-                generateMessage(os, (int)o.clientOrderID, '8', '9', o.side);
+            if (o.getOrdStatus() == '2') {
+                generateMessage(os, (int)o.getClientOrderID(), '8', '9', o.getSide());
                 os.flush();
 
             // If not then cancel each slice in turn
             } else {
                 int rmvdContent = 0;
                 int filledCount = 0;
-                for (Order slice : o.slices) {
-                    if (slice.OrdStatus == '2') {
+                for (Order slice : o.getSlices()) {
+                    if (slice.getOrdStatus() == '2') {
                         filledCount++;
-                    } else if (slice.OrdStatus == '0') {
-                        o.slices.remove(slice);
+                    } else if (slice.getOrdStatus() == '0') {
+                        o.getSlices().remove(slice);
                         rmvdContent++;
                     }
                 }
 
                 // Send back a cancelled message
-                generateMessage(os, (int)o.clientOrderID, '4', '9', o.side);
+                generateMessage(os, (int)o.getClientOrderID(), '4', '9', o.getSide());
                 os.flush();
             }
         } catch (IOException e) {
@@ -190,11 +190,11 @@ public class ClientWorkerThread implements Runnable{
         try {
             ObjectOutputStream os;
             os = new ObjectOutputStream(routerSocket.getOutputStream());
-            for (int i = 0; i < order.slices.size(); i++) {
+            for (int i = 0; i < order.getSlices().size(); i++) {
                 os.writeObject(Router.api.sendCancel);
-                os.writeInt((int)order.id);
+                os.writeInt((int)order.getOmID());
                 os.writeInt(i);
-                os.writeObject(order.instrument);
+                os.writeObject(order.getInstrument());
                 //os.writeInt((int) order.sizeRemaining());
                 os.flush();
             }
@@ -204,5 +204,4 @@ public class ClientWorkerThread implements Runnable{
             e.printStackTrace();
         }
     }
-
 }
