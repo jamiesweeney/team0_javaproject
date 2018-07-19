@@ -213,6 +213,8 @@ public class SampleClient extends Mock implements Client
 					for(int i=0;i<fixTags.length;i++)
 					{
 						String[] tag_value=fixTags[i].split("=");
+				 		switch(tag_value[0]){
+							case"11":OrderId=Integer.parseInt(tag_value[1]);break;
 						switch(tag_value[0])
 						{
 							case"11":OrderId=Integer.parseInt(tag_value[1]);

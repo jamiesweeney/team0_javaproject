@@ -9,6 +9,8 @@ import org.apache.log4j.PropertyConfigurator ;
 
 import LiveMarketData.LiveMarketData;
 import OrderManager.OrderManager;
+import TradeScreen.Screen;
+import TradeScreen.TraderLogic;
 
 
 /**
@@ -41,7 +43,13 @@ public class Main
 		new SampleRouter("Router LSE",2010).start();
 		new SampleRouter("Router BATE",2011).start();
 
-		new Trader("Trader James",2020).start();
+    
+    // _---------------------------HERE
+		//Thread a = new Thread(new Screen("Trader James", 2020),"Thread x");
+		//a.start();
+    //new Screen("Trader James", 2020).start();
+    new Trader("Trader James",2020).start();
+    // _---------------------------HERE
 
 		//start order manager
 		InetSocketAddress[] clients = {new InetSocketAddress("localhost",2000),
@@ -63,7 +71,6 @@ public class Main
 /**
  * The MockClient class is used to simulate an actual client and is used for program testing.
  * */
-
 class MockClient extends Thread
 {
 	private Logger logger = Logger.getLogger(MockClient.class);
