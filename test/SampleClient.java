@@ -33,8 +33,9 @@ public class SampleClient extends Mock implements Client
 	private Order currentOrder;
 
 	private Logger logger = Logger.getLogger(SampleClient.class);
+	private int connectedPort;
+	int orderID;
 
-			
 	public SampleClient(int port) throws IOException
 	{
 		PropertyConfigurator.configure("resources/log4j.properties");
@@ -42,6 +43,8 @@ public class SampleClient extends Mock implements Client
 		//OM will connect to us
 		omConn=new ServerSocket(port).accept();
 		logger.info("OM connected to client port "+port);
+		connectedPort = port;
+		orderID = connectedPort+id;
 	}
 
 
@@ -58,8 +61,9 @@ public class SampleClient extends Mock implements Client
 		NewOrderSingle nos = new NewOrderSingle(size,price,instrument,side);
 
 		// Adding order to queue
-		show("sendOrder: id="+id+" size="+size+" price="+price+" instrument="+INSTRUMENTS[instid].toString()+" side="+side);
+		show("sendOrder: id="+orderID+" size="+size+" price="+price+" instrument="+INSTRUMENTS[instid].toString()+" side="+side);
 		OUT_QUEUE.put(id,nos);
+		orderID++;
 
 
 		// Write the order
