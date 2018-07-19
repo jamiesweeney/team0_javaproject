@@ -45,10 +45,10 @@ public class Main
 
     
     // _---------------------------HERE
-		//Thread a = new Thread(new Screen("Trader James", 2020),"Thread x");
-		//a.start();
-    //new Screen("Trader James", 2020).start();
-    new Trader("Trader James",2020).start();
+		Thread a = new Thread(new Screen("Trader James", 2020),"Thread x");
+		a.start();
+//    	new Screen("Trader James", 2020).start();
+//   	 	new Trader("Trader James",2020).start();
     // _---------------------------HERE
 
 		//start order manager
@@ -108,6 +108,9 @@ class MockClient extends Thread
 //				client.sendRandomOrder();
 
 				int id=client.sendRandomOrder();
+				id=client.sendRandomOrder();
+				id=client.sendRandomOrder();
+				
 //				id=client.sendRandomOrder();
 //				id=client.sendRandomOrder();
 
