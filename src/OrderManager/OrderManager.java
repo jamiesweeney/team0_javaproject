@@ -1,230 +1,718 @@
 package OrderManager;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.SocketException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.IntSummaryStatistics;
-import java.util.Map;
-
 import Database.Database;
 import LiveMarketData.LiveMarketData;
 import OrderClient.NewOrderSingle;
 import OrderRouter.Router;
-import OrderRouter.Router.api;
 import TradeScreen.TradeScreen;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
 
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.LinkedBlockingQueue;
+
+/**
+ * <h1>OrderManager</h1>
+ * */
 public class OrderManager {
-	private static LiveMarketData liveMarketData;
-	private HashMap<Integer,Order> orders=new HashMap<Integer,Order>(); //debugger will do this line as it gives state to the object
-	//currently recording the number of new order messages we get. TODO why? use it for more?
-	private int id=0; //debugger will do this line as it gives state to the object
-	private Socket[] orderRouters; //debugger will skip these lines as they dissapear at compile time into 'the object'/stack
-	private Socket[] clients;
-	private Socket trader;
-	private Socket connect(InetSocketAddress location) throws InterruptedException{
-		boolean connected=false;
-		int tryCounter=0;
-		while(!connected&&tryCounter<600){
-			try{
-				Socket s=new Socket(location.getHostName(),location.getPort());
-				s.setKeepAlive(true);
-				return s;
-			}catch (IOException e) {
-				Thread.sleep(1000);
-				tryCounter++;
-			}
-		}
-		System.out.println("Failed to connect to "+location.toString());
-		return null;
-	}
-	//@param args the command line arguments
-	public OrderManager(InetSocketAddress[] orderRouters, InetSocketAddress[] clients,InetSocketAddress trader,LiveMarketData liveMarketData)throws IOException, ClassNotFoundException, InterruptedException{
-		this.liveMarketData=liveMarketData;
-		this.trader=connect(trader);
-		//for the router connections, copy the input array into our object field.
-		//but rather than taking the address we create a socket+ephemeral port and connect it to the address
-		this.orderRouters=new Socket[orderRouters.length];
-		int i=0; //need a counter for the the output array
-		for(InetSocketAddress location:orderRouters){
-			this.orderRouters[i]=connect(location);
-			i++;
-		}
 
-		//repeat for the client connections
-		this.clients=new Socket[clients.length];
-		i=0;
-		for(InetSocketAddress location:clients){
-			this.clients[i]=connect(location);
-			i++;
-		}
-		int clientId,routerId;
-		Socket client,router;
-		//main loop, wait for a message, then process it
-		while(true){
-			//TODO this is pretty cpu intensive, use a more modern polling/interrupt/select approach
-			//we want to use the arrayindex as the clientId, so use traditional for loop instead of foreach
-			for(clientId=0;clientId<this.clients.length;clientId++){ //check if we have data on any of the sockets
-				client=this.clients[clientId];
-				if(0<client.getInputStream().available()){ //if we have part of a message ready to read, assuming this doesn't fragment messages
-					ObjectInputStream is=new ObjectInputStream(client.getInputStream()); //create an object inputstream, this is a pretty stupid way of doing it, why not create it once rather than every time around the loop 
-					String method=(String)is.readObject();
-					System.out.println(Thread.currentThread().getName()+" calling "+method);
-					switch(method){ //determine the type of message and process it
-						//call the newOrder message with the clientId and the message (clientMessageId,NewOrderSingle)
-						case "newOrderSingle": newOrder(clientId, is.readInt(), (NewOrderSingle)is.readObject());break;
-						//TODO create a default case which errors with "Unknown message type"+...
-					}
-				}
-			}
-			for(routerId=0;routerId<this.orderRouters.length;routerId++){ //check if we have data on any of the sockets
-				router=this.orderRouters[routerId];
-				if(0<router.getInputStream().available()){ //if we have part of a message ready to read, assuming this doesn't fragment messages
-					ObjectInputStream is=new ObjectInputStream(router.getInputStream()); //create an object inputstream, this is a pretty stupid way of doing it, why not create it once rather than every time around the loop
-					String method=(String)is.readObject();
-					System.out.println(Thread.currentThread().getName()+" calling "+method);
-					switch(method){ //determine the type of message and process it
-						case "bestPrice":int OrderId=is.readInt();
-							int SliceId=is.readInt();
-							Order slice=orders.get(OrderId).slices.get(SliceId);
-							slice.bestPrices[routerId]=is.readDouble();
-							slice.bestPriceCount+=1;
-							if(slice.bestPriceCount==slice.bestPrices.length)
-								reallyRouteOrder(SliceId, slice);
-							break;
-						case "newFill":newFill(is.readInt(),is.readInt(),is.readInt(),is.readDouble());break;
-					}
-				}
-			}
-			
-			if(0<this.trader.getInputStream().available()){
-				ObjectInputStream is=new ObjectInputStream(this.trader.getInputStream());
-				String method=(String)is.readObject();
-				System.out.println(Thread.currentThread().getName()+" calling "+method);
-				switch(method){
-					case "acceptOrder":acceptOrder(is.readInt());break;
-					case "sliceOrder":sliceOrder(is.readInt(), is.readInt());
-				}
-			}
-		}
-	}
-	private void newOrder(int clientId, int clientOrderId, NewOrderSingle nos) throws IOException{
-		orders.put(id, new Order(clientId, clientOrderId, nos.instrument, nos.size));
-		//send a message to the client with 39=A; //OrdStatus is Fix 39, 'A' is 'Pending New'
-		ObjectOutputStream os=new ObjectOutputStream(clients[clientId].getOutputStream());
-		//newOrderSingle acknowledgement
-		//ClOrdId is 11=
-		os.writeObject("11="+clientOrderId+";35=A;39=A;");
-		os.flush();
-		sendOrderToTrader(id,orders.get(id),TradeScreen.api.newOrder);
-		//send the new order to the trading screen
-		//don't do anything else with the order, as we are simulating high touch orders and so need to wait for the trader to accept the order
-		id++;
-	}
-	private void sendOrderToTrader(int id,Order o,Object method) throws IOException{
-		ObjectOutputStream ost=new ObjectOutputStream(trader.getOutputStream());
-		ost.writeObject(method);
-		ost.writeInt(id);
-		ost.writeObject(o);
-		ost.flush();
-	}
-	public void acceptOrder(int id) throws IOException{
-		Order o=orders.get(id);
-		if(o.OrdStatus!='A'){ //Pending New
-			System.out.println("error accepting order that has already been accepted");
-			return;
-		}
-		o.OrdStatus='0'; //New
-		ObjectOutputStream os=new ObjectOutputStream(clients[o.clientid].getOutputStream());
-		//newOrderSingle acknowledgement
-		//ClOrdId is 11=
-		os.writeObject("11="+o.ClientOrderID+";35=A;39=0");
-		os.flush();
 
-		price(id,o);
-	}
-	public void sliceOrder(int id,int sliceSize) throws IOException{
-		Order o=orders.get(id);
-		//slice the order. We have to check this is a valid size.
-		//Order has a list of slices, and a list of fills, each slice is a childorder and each fill is associated with either a child order or the original order
-		if(sliceSize>o.sizeRemaining()-o.sliceSizes()){
-			System.out.println("error sliceSize is bigger than remaining size to be filled on the order");
-			return;
-		}
-		int sliceId=o.newSlice(sliceSize);
-		Order slice=o.slices.get(sliceId);
-		internalCross(id,slice);
-		int sizeRemaining=o.slices.get(sliceId).sizeRemaining();
-		if(sizeRemaining>0){
-			routeOrder(id,sliceId,sizeRemaining,slice);
-		}
-	}
-	private void internalCross(int id, Order o) throws IOException{
-		for(Map.Entry<Integer, Order>entry:orders.entrySet()){
-			if(entry.getKey().intValue()==id)continue;
-			Order matchingOrder=entry.getValue();
-			if(!(matchingOrder.instrument.equals(o.instrument)&&matchingOrder.initialMarketPrice==o.initialMarketPrice))continue;
-			//TODO add support here and in Order for limit orders
-			int sizeBefore=o.sizeRemaining();
-			o.cross(matchingOrder);
-			if(sizeBefore!=o.sizeRemaining()){
-				sendOrderToTrader(id, o, TradeScreen.api.cross);
-			}
-		}
-	}
-	private void cancelOrder(){
-		
-	}
-	private void newFill(int id,int sliceId,int size,double price) throws IOException{
-		Order o=orders.get(id);
-		o.slices.get(sliceId).createFill(size, price);
-		if(o.sizeRemaining()==0){
-			Database.write(o);
-		}
-		sendOrderToTrader(id, o, TradeScreen.api.fill);
-	}
-	private void routeOrder(int id,int sliceId,int size,Order order) throws IOException{
-		for(Socket r:orderRouters){
-			ObjectOutputStream os=new ObjectOutputStream(r.getOutputStream());
-			os.writeObject(Router.api.priceAtSize);
-			os.writeInt(id);
-			os.writeInt(sliceId);
-			os.writeObject(order.instrument);
-			os.writeInt(order.sizeRemaining());
-			os.flush();
-		}
-		//need to wait for these prices to come back before routing
-		order.bestPrices=new double[orderRouters.length];
-		order.bestPriceCount=0;
-	}
-	private void reallyRouteOrder(int sliceId,Order o) throws IOException{
-		//TODO this assumes we are buying rather than selling
-		int minIndex=0;
-		double min=o.bestPrices[0];
-		for(int i=1;i<o.bestPrices.length;i++){
-			if(min>o.bestPrices[i]){
-				minIndex=i;
-				min=o.bestPrices[i];
-			}
-		}
-		ObjectOutputStream os=new ObjectOutputStream(orderRouters[minIndex].getOutputStream());
-		os.writeObject(Router.api.routeOrder);
-		os.writeInt(o.id);
-		os.writeInt(sliceId);
-		os.writeInt(o.sizeRemaining());
-		os.writeObject(o.instrument);
-		os.flush();
-	}
-	private void sendCancel(Order order,Router orderRouter){
-		//orderRouter.sendCancel(order);
-		//order.orderRouter.writeObject(order);
-	}
-	private void price(int id,Order o) throws IOException{
-		liveMarketData.setPrice(o);
-		sendOrderToTrader(id, o, TradeScreen.api.price);
-	}
+    private static LiveMarketData liveMarketData;
+    // Instance variables
+    private Logger logger = Logger.getLogger(OrderManager.class);
+    protected HashMap<Integer, Order> orders = new HashMap<Integer, Order>(); //debugger will do this line as it gives state to the object
+    //currently recording the number of new order messages we get. TODO why? use it for more?
+    private int id = 0; //debugger will do this line as it gives state to the object
+
+  
+    private boolean isRunning;
+
+    protected Socket[] orderRouters;
+    protected Socket[] clients;
+    protected Socket trader;
+
+
+    protected Queue<OrderJob> clientQueue;
+
+
+
+    /**
+     * OrderManager is the reworked constructor of the OrderManager class.
+     * It takes several arguments which are used to initialise it's member variables.
+     * */
+    // Constructor
+    public OrderManager(InetSocketAddress[] orderRouters,
+                        InetSocketAddress[] clients,
+                        InetSocketAddress trader,
+                        LiveMarketData liveMarketData)
+    {
+        PropertyConfigurator.configure("resources/log4j.properties");
+        OrderManager.liveMarketData = liveMarketData;
+
+        // Set up the order manager
+        setup(orderRouters, clients, trader);
+
+
+        startOM();
+
+
+        // Start doing the main logic
+        mainLogic();
+    }
+
+    //Constructor used to make server take connections and not seek them.
+    //Default server port set to 2025.
+    public OrderManager()
+    {
+        try
+        {
+            Socket omOpenPort = new ServerSocket(2025).accept();
+            logger.info("Server port opened on port 2025 successfully.");
+        }
+        catch(IOException e)
+        {
+            logger.error("IOException caught in OrderManager constructor");
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * setup() is called from the constructor and initialises the trader and routers variables.
+     * This method connects the program through Sockets, which are used to transfer the data.
+     * */
+    private void setup(InetSocketAddress[] orderRouters, InetSocketAddress[] clients, InetSocketAddress trader) {
+
+        // Set up trader connection
+        this.trader = connect(trader);
+
+
+        // Fill order routers with connections
+        int i = 0;
+        this.orderRouters = new Socket[orderRouters.length];
+        for (InetSocketAddress location : orderRouters) {
+            this.orderRouters[i++] = connect(location);
+        }
+
+
+        // Fill clients with connections
+        i = 0;
+        this.clients = new Socket[clients.length];
+        for (InetSocketAddress location : clients) {
+            this.clients[i++] = connect(location);
+        }
+
+
+        // Set up incoming messages queues
+        clientQueue = new LinkedBlockingQueue<>();
+
+        // Initiate our message handling threads
+        Thread t = new Thread(new ClientWorkerThread(clientQueue ,this));
+        t.start();
+    }
+
+
+    /**
+     *connect() takes a Socket as an argument and is used to connect the OrderManager object to the socket it is passed.
+     * The method will attempt a connection 600 times before throwing an error.
+     * */
+    // Creates a socket to an address
+    private Socket connect(InetSocketAddress location) {
+        int tryCounter = 0;
+        Socket s = null;
+
+        // Try and connect 600 times
+        while (tryCounter < 600) {
+            try {
+                // Create the socket
+                s = new Socket(location.getHostName(), location.getPort());
+                s.setKeepAlive(true);
+                return s;
+            } catch (IOException e) {
+                tryCounter++;
+            }
+        }
+        logger.error("Failed to connect to " + location.toString());
+        return s;
+    }
+
+    /*
+        Contains the main logic for the order manager
+
+        - Checks client messages
+        - Checks router messages
+        - Checks trader messages
+     */
+
+    /**
+     * The mainLogic() method contains the core functionality of the object.
+     * It contains a while() loop which will iterate so long as the isRunning variable is true.
+     * Each iteration of the while() loop, the program will check for any inbound messages from the clients, routers and trader.
+     * If data is received, it delegates the manipulation of the data to the appropriate method.
+     * */
+    private void mainLogic() {
+//        System.out.println("sajsa");
+
+        // Constantly check for messages
+
+        while (isRunning) {
+
+
+            // Check each client / router / trader in turn
+            checkClients();
+            checkRouters();
+            checkTrader();
+        }
+    }
+
+    /*
+        Checks the messages for all clients
+        Creates a new order if order requests received.
+    */
+    /**
+     * checkClients() is called from within the mainLogic() while() loop.
+     * Its objective is to check for any inbound messages from the clients that are connected to the OrderManager object, and creates a new order if
+     * it receives a request for one.
+     * */
+    private void checkClients() {
+
+
+
+        int clientId;
+        Socket client;
+        ObjectInputStream is;
+        ArrayList<Object> args;
+        OrderJob job;
+//        System.out.println("in checkCLients");
+
+
+        // Iterating over each client
+        for (clientId = 0; clientId < this.clients.length; clientId++) {
+            client = this.clients[clientId];
+
+//            System.out.println("Going through clients");
+
+            try {
+                // Check if there is any new data
+                if (0 < client.getInputStream().available()) {
+
+                    System.out.println("Got a message");
+
+                    is = new ObjectInputStream(client.getInputStream()); //create an object inputstream, this is a pretty stupid way of doing it, why not create it once rather than every time around the loop
+                    String method = (String) is.readObject();
+
+                    switch (method) {
+                        // If a new order single, we want to create a new Order object
+                        case "newOrderSingle":
+                            args = new ArrayList<>();
+                            args.add(clientId);
+                            args.add(is.readInt());
+                            args.add(is.readObject());
+
+                            job = new OrderJob(method, args);
+
+                            clientQueue.add(job);
+                            System.out.println(job.toString());
+                            break;
+
+                        case "sendCancel":
+                            args = new ArrayList<>();
+                            args.add(is.readInt());
+
+                            job = new OrderJob(method, args);
+
+                            clientQueue.add(job);
+                            break;
+
+                        default:
+                            logger.error("Error, unknown message type: " + method);
+                            break;
+                    }
+                }
+            } catch (IOException e) {
+                // TODO - TEAM 15
+                logger.error("IOException detected: " + e);
+                e.printStackTrace();
+            } catch (ClassNotFoundException e) {
+                // TODO - TEAM 15
+                logger.error("ClassNotFoundException detected: " + e);
+                e.printStackTrace();
+            }
+
+
+        }
+    }
+
+
+    /**
+     * addOrder() is used to add the order it is passed to the order collection object: orders.
+     * It adds extra indexing data: the id of the client, and the id of the clients order.
+     * */
+    public synchronized int addOrder(int clientId, int clientOrderId, NewOrderSingle nos){
+
+        // Create the new order and add to the order array
+        int new_id = id++;
+        Order order = new Order(clientId, clientOrderId, nos.instrument, nos.size, nos.side);
+        orders.put(new_id, order);
+        return new_id;
+
+    }
+
+
+
+    /**
+     * sendOrderToTrader() is used to pass new orders to the trader using an OutputStream.
+     * This function also throws an IOException.
+     * */
+    private void sendOrderToTrader(int id, Order o, Object method) throws IOException {
+
+        // Write the order date to the trader stream
+        ObjectOutputStream ost = new ObjectOutputStream(trader.getOutputStream());
+        ost.writeObject(method);
+        ost.writeInt(id);
+        ost.writeObject(o);
+        ost.flush();
+    }
+
+    /**
+     * checkRouters() is used to check for any messages from all the routers contained in orderRouters.
+     */
+    private void checkRouters() {
+        int routerId;
+        Socket router;
+        ObjectInputStream is;
+
+
+        // Iterating over each router
+        for (routerId = 0; routerId < this.orderRouters.length; routerId++) {
+            router = this.orderRouters[routerId];
+
+            try {
+                // Check if there is any new data
+                if (0 < router.getInputStream().available()) { //if we have part of a message ready to read, assuming this doesn't fragment messages
+
+                    is = new ObjectInputStream(router.getInputStream()); //create an object inputstream, this is a pretty stupid way of doing it, why not create it once rather than every time around the loop
+                    String method = (String) is.readObject();
+                    logger.info(Thread.currentThread().getName() + " calling " + method);
+
+                    // Determine the message type
+                    switch (method) {
+                        //TODO - Figure out what is happening here
+                        // If a best price message, we want to
+                        case "bestPrice":
+                            int orderId = is.readInt();
+                            int sliceId = is.readInt();
+
+                            Order slice = orders.get(orderId).slices.get(sliceId);
+                            slice.bestPrices[routerId] = is.readDouble();
+                            slice.bestPriceCount += 1;
+
+                            if (slice.bestPriceCount == slice.bestPrices.length)
+                                reallyRouteOrder(sliceId, slice);
+                            break;
+                        case "orderCancelled":
+                            orderId = is.readInt();
+                            sliceId = is.readInt();
+                            cancelSuccess(orderId, sliceId);
+                            break;
+
+                        //TODO - Figure out what is happening here
+                        // If a new fill order, we want to
+                        case "newFill":
+                            newFill(is.readInt(), is.readInt(), is.readInt(), is.readDouble());
+                            break;
+                    }
+                }
+
+            } catch (IOException e) {
+                // TODO - TEAM 15
+                logger.error("IOException detected: " + e);
+                e.printStackTrace();
+            } catch (ClassNotFoundException e) {
+                // TODO - TEAM 15
+                logger.error("ClassNotFoundException detected: " + e);
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     reallyRouteOrder() takes 2 arguments: a slice id and an order.
+     The method then determines whether the order is a buy or a sell, then sends the order to the exchange.
+    */
+    private void reallyRouteOrder(int sliceId, Order o) throws IOException {
+
+
+        // Iterate over prices and find minimum
+        // Route to the minimum
+        if (o.side == 1)//if buying the stock
+        {
+            o.routerID = findPurchaseRoute(o);
+        }
+        else if(o.side == 2)//if selling the stock
+        {
+            o.routerID = findSalesRoute(o);
+        }
+        ObjectOutputStream os = new ObjectOutputStream(orderRouters[o.routerID].getOutputStream());
+        os.writeObject(Router.api.routeOrder);
+        os.writeInt((int) o.id);
+        os.writeInt(sliceId);
+        os.writeInt((int) o.sizeRemaining());
+        os.writeObject(o.instrument);
+        os.flush();
+    }
+
+
+    /**
+     * newFill() takes arguments for an order id, a slice id, a n order size and a price.
+     * The method then creates a new fill order for an order slice, and passes the order to the trader as a fill.
+     */
+    private void newFill(int id, int sliceId, int size, double price) throws IOException {
+        Order o = orders.get(id);
+        o.slices.get(sliceId).createFill(size, price);
+
+        // If there is nothing left write to database
+        if (o.sizeRemaining() == 0) {
+            Database.write(o);
+        }
+        sendOrderToTrader(id, o, TradeScreen.api.fill);
+    }
+
+
+    /**
+     * checkTrader() is used to check for any messages for the trader.
+     * If there are messages to process, process them by type, i.e acceptOrder, sliceOrder etc...
+     */
+    private void checkTrader() {
+        ObjectInputStream is;
+
+        try {
+            // If there is any messages from the trader
+            if (0 < this.trader.getInputStream().available()) {
+                is = new ObjectInputStream(this.trader.getInputStream());
+                String method = (String) is.readObject();
+                logger.info(Thread.currentThread().getName() + " calling " + method);
+                // Determine the message type
+                switch (method) {
+                    // If the trader has accepted the new order
+                    case "acceptOrder":
+                        acceptOrder(is.readInt());
+                        break;
+
+                    // If the trader has sliced the order
+                    case "sliceOrder":
+                        sliceOrder(is.readInt(), is.readInt());
+                }
+            }
+        } catch (IOException e) {
+            // TODO - TEAM 15
+            logger.error("IOException detected: " + e);
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            // TODO - TEAM 15
+            logger.error("ClassNotFoundException detected: " + e);
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * acceptOrder() takes an orderid as an int, and pulls the order from the orders container.
+     * If the order has not already been accepted, the method will generate an output stream and price the order accordingly.
+     * */
+    private void acceptOrder(int id) throws IOException {
+        Order o = orders.get(id);
+
+        // If the order is pending new, order has already been accepted
+        if (o.OrdStatus != 'A') {
+            logger.error("Error accepting order that has already been accepted");
+            return;
+        }
+
+        // If not then the order must be new
+        o.OrdStatus = '0';
+        ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.clientid].getOutputStream());
+
+        // Write acknowledgement to the client
+        generateMessage(os, (int)o.clientOrderID, '2', '8', o.side);
+        os.flush();
+
+        // price the order
+        price(id, o);
+    }
+
+
+
+    /**
+     * The price() method is used to update the live market data. Once the market data is updated, the order is sent to the trader.*
+     */
+    private void price(int id, Order o) throws IOException {
+
+        //TODO - Why do we send back to the trader with the api.price?
+        // Set the market price and send the order to the trader
+        liveMarketData.setPrice(o);
+        sendOrderToTrader(id, o, TradeScreen.api.price);
+    }
+
+    /**
+     sliceOrder() is called if a trader needs to slice an order. The method takes an id and a slice size
+     which it uses to locate the order to slice it to the desired size.
+    */
+    private void sliceOrder(int id, int sliceSize) throws IOException {
+
+        Order o = orders.get(id);
+
+        //Order has a list of slices, and a list of fills, each slice is a child order and each fill is associated with either a child order or the original order
+        //Make sure that the slice size is valid (must be less than the remaining orders)
+        if (sliceSize > o.sizeRemaining() - o.sliceSizes()) {
+            logger.error("error sliceSize is bigger than remaining size to be filled on the order");
+            return;
+        }
+
+        // If valid slice, create a new slice
+        int sliceId = o.newSlice(sliceSize);
+        Order slice = o.slices.get(sliceId);
+
+        // Do internal cross with slice
+        internalCross(id, slice);
+        int sizeRemaining = (int) o.slices.get(sliceId).sizeRemaining();
+
+        // If the internal cross does not satisfy then route to exchange
+        if (sizeRemaining > 0) {
+            routeOrder(id, sliceId, sizeRemaining, slice);
+            o.routeCode = 2;
+        }
+    }
+
+
+    /**
+        internalCross() performs an internal cross. If there's 2 matching buy/sell then match them.
+
+        The internal cross attempts to match 2 trades that can be completed within the OM system
+        as opposed to routing it to the exchange. This avoids exchange fees and makes the bank/clients more money
+        overall.
+     */
+    private void internalCross(int id, Order o) throws IOException {
+
+        // Iterating over all the orders
+        for (Map.Entry<Integer, Order> entry : orders.entrySet()) {
+
+            Order matchingOrder = entry.getValue();
+
+            // Don't include the order we're trying to cross
+            if (entry.getKey() == id) {
+                continue;
+
+                // Don't include non equal instruments
+            } else if (!(matchingOrder.instrument.equals(o.instrument))) {
+                continue;
+
+                // Don't include non matching prices
+            } else if (!(matchingOrder.initialMarketPrice == o.initialMarketPrice)) {
+                continue;
+
+                // Don't include orders with same side
+            } else if ((matchingOrder.side == o.side)) {
+                continue;
+            }
+
+            //TODO add support here and in Order for limit orders
+
+            // If everything passed, cross the orders
+            int sizeBefore = (int) o.sizeRemaining();
+            o.cross(matchingOrder);
+
+            // If size has changed, send the order to the trader
+            if (sizeBefore != o.sizeRemaining()) {
+                sendOrderToTrader(id, o, TradeScreen.api.cross);
+            }
+        }
+    }
+
+
+    // Router request logic
+
+    /**
+    routeOrder() basically just sends the order to the exchanges and get a price for them
+    in comparison reallyRouteOrder picks the best price and routes the order to that exchange
+    */
+    private void routeOrder(int id, int sliceId, int size, Order order) throws IOException {
+
+        ObjectOutputStream os;
+
+        // Iterate over router sockets
+        for (Socket r : orderRouters) {
+            os = new ObjectOutputStream(r.getOutputStream());
+
+            // Send the order details
+            os.writeObject(Router.api.priceAtSize);
+            os.writeInt(id);
+            os.writeInt(sliceId);
+            os.writeObject(order.instrument);
+            os.writeInt((int) order.sizeRemaining());
+            os.flush();
+        }
+
+        // need to wait for these prices to come back before routing
+        order.bestPrices = new double[orderRouters.length];
+        order.bestPriceCount = 0;
+    }
+
+    /**
+     * cancelOrder() takes an order id which references an order in the orders container.
+     * This function then removes the order from the orders container and generates a message with specific tags depending on the
+     * order status.
+     **/
+    private void cancelOrder(int orderID) {
+        Order o = orders.get(orderID);
+        try {
+            ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.clientid].getOutputStream());
+
+            if (o.OrdStatus == '0')
+            {
+                orders.remove(orderID);
+                generateMessage(os, (int)o.clientOrderID, '4','F',o.side);
+                os.flush();
+            }
+            else if (o.OrdStatus == '2') {
+                generateMessage(os, (int)o.clientOrderID, '8', '9', o.side);
+                os.flush();
+            } else {
+                int rmvdContent = 0;
+                int filledCount = 0;
+                for (Order slice : o.slices) {
+                    if (slice.OrdStatus == '2') {
+                        filledCount++;
+                    } else if (slice.OrdStatus == '0') {
+                        o.slices.remove(slice);
+                        rmvdContent++;
+                    }
+                }
+                generateMessage(os, (int)o.clientOrderID, '4', 'F', o.side);
+                os.flush();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+/**
+ * sendCancel() takes an order and a socket as arguments, and using an OutputStream pointed at the router socket,
+ * writes a cancellation message.
+ */
+    private void sendCancel(Order order, Socket routerSocket) {
+//        orderRouter.sendCancel(order);
+//        order.orderRouter.writeObject(order);
+        try {
+            ObjectOutputStream os;
+            os = new ObjectOutputStream(routerSocket.getOutputStream());
+            for (int i = 0; i < order.slices.size(); i++) {
+                os.writeObject(Router.api.sendCancel);
+                os.writeInt((int)order.id);
+                os.writeInt(i);
+                os.writeObject(order.instrument);
+                //os.writeInt((int) order.sizeRemaining());
+                os.flush();
+            }
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * cancelSuccess() takes both an orderID and a sliceID as arguments and works by getting the requested order from
+     * orders and writing a message with 4 as the order status and 9 as the msgType.
+     */
+    private void cancelSuccess(int orderID, int sliceID)
+    {
+        Order o = orders.get(orderID);
+        try {
+            ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.clientid].getOutputStream());
+            generateMessage(os, (int)o.clientOrderID, '4', '9', o.side);
+            os.flush();
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+
+    }
+
+    /**
+     * generateMessage() takes in data as arguments and writes the data to an object in a specific format.
+     * */
+    private void generateMessage(ObjectOutputStream os, int clientOID, char ordStatus, char msgType, int side)
+    {
+        try {
+            os.writeObject("11=" + clientOID + ";39=" + ordStatus + ";35=" + msgType + ";54=" + side);
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+
+    /**
+     * findPurchaseRoute() takes an order as an argument, and works by finding the best
+     * available price for the order, by comparing the values in the bestPrices container.
+     * */
+    private int findPurchaseRoute(Order o)
+    {
+
+        int minIndex = 0;
+        double minPrice = o.bestPrices[0];
+        for (int i = 1; i < o.bestPrices.length; i++) {
+            if (minPrice > o.bestPrices[i]) {
+                minIndex = i;
+                minPrice = o.bestPrices[i];
+            }
+        }
+        return minIndex;
+    }
+
+    /**
+     * findSalesRoute takes an order as an argument, and based on the values of bestPrices within the order, will return an
+     * int corresponding to the index of the best available price.
+     */
+    private int findSalesRoute(Order o)
+    {
+        int maxIndex = 0;
+        double maxPrice = o.bestPrices[0];
+        for (int i = 1; i < o.bestPrices.length; i++) {
+            if (maxPrice < o.bestPrices[i]) {
+                maxIndex = i;
+                maxPrice = o.bestPrices[i];
+            }
+        }
+        return maxIndex;
+    }
+
+
+    /**
+     * startOM() is used to activate the while() loop within mainLogic().
+     * */
+    public void startOM()
+    {
+        isRunning = true;
+    }
+
+    /**
+     * stopOM() is used to deactivate the while() loop within mainLogic().
+     * */
+    public void stopOM()
+    {
+        isRunning = false;
+    }
 }
+
