@@ -7,6 +7,8 @@ import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.text.*;
 import javafx.stage.Stage;
+
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.String;
@@ -27,8 +29,8 @@ public class Screen extends Application implements Runnable
     Button buttonorder4;
     Button buttonorder5;
     Label statusLabel;
-    Button button;
-    Button button2;
+    Button acceptButton;
+    Button sliceButton;
 
     ObjectInputStream is;
 
@@ -67,8 +69,8 @@ public class Screen extends Application implements Runnable
         buttons.add(buttonorder4);
         buttons.add(buttonorder5);
 
-        button = new Button("Accept");
-        button2 = new Button("Slice");
+        acceptButton = new Button("Accept");
+        sliceButton = new Button("Slice");
 
         // Grid Pane stuff
         GridPane gridPane = new GridPane();
@@ -81,8 +83,8 @@ public class Screen extends Application implements Runnable
         gridPane.add(buttonorder3, 10,2,6,2);
         gridPane.add(buttonorder4, 10,3,6,2);
         gridPane.add(buttonorder5, 10,4,6,2);
-        gridPane.add(button, 1,4,3,1);
-        gridPane.add(button2, 4,4,3,1);
+        gridPane.add(acceptButton, 1,4,3,1);
+        gridPane.add(sliceButton, 4,4,3,1);
         gridPane.add(statusLabel, 0, 0,2, 1);
 
         Scene scene = new Scene(gridPane, 400, 300);
@@ -122,10 +124,25 @@ public class Screen extends Application implements Runnable
             Button button = buttons.get(index);
             Platform.runLater(() -> {
                 button.setText("" + order.getClientOrderID());
+                button.setOnAction(e-> text.setText("Order Instrument: " + order.getInstrument() + "\nSide: " + order.getSide() +
+                                                    "\nOrder Size: " + order.getSize()));
+                acceptButton.setOnAction(event -> {
+                    try {
+                        trader.acceptOrder((int) order.getOmID());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                });
+                sliceButton.setOnAction(event -> {
+                    try {
+                        trader.sliceOrder((int) order.getClientOrderID(), (int)order.sliceSizes()/2);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                });
             });
         }
     }
-
     public void addOrder(Order order) {
         orders.add(order);
         updateButtons(order);

@@ -86,7 +86,9 @@ public class TraderLogic extends Thread implements TradeScreen, Runnable{
 
     @Override
     public void price(int id, Order o) throws InterruptedException, IOException {
-        sliceOrder(id,(int)orders.get(id).sizeRemaining()/2);
+        orders.put(id, o);
+        screen.addOrder(o);
+        //sliceOrder(id,(int)orders.get(id).sizeRemaining()/2);
     }
 
     public void setScreen(Screen screen) {
