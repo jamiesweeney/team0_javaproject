@@ -71,18 +71,21 @@ class MockClient extends Thread
 
 			if(port==2000)
 			{
-				//client.sendOrder(int id, int size, char msgType, float price, Instrument ins, int side);
-				//client.sendOrder(0, 100, 'D', 8.0f, new Instrument(new Ric("VOD.L")), 1);
-				client.sendRandomOrder();
+//				client.sendOrder(int id, int size, char msgType, float price, Instrument ins, int side);
+//				client.sendOrder(0, 100, 'D', 8.0f, new Instrument(new Ric("VOD.L")), 1);
+//				client.sendRandomOrder();
 
 				int id=client.sendRandomOrder();
+				id=client.sendRandomOrder();
+				id=client.sendRandomOrder();
+
 
 				client.sendCancel(id);
 				client.messageHandler();
 			}
 			else
 			{
-				client.sendRandomOrder();
+//				client.sendRandomOrder();
 				client.messageHandler();
 			}
 
