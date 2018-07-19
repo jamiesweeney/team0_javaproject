@@ -32,6 +32,10 @@ public class OrderManager {
     protected HashMap<Integer, Order> orders = new HashMap<Integer, Order>(); //debugger will do this line as it gives state to the object
     //currently recording the number of new order messages we get. TODO why? use it for more?
     private int id = 0; //debugger will do this line as it gives state to the object
+
+  
+    private boolean isRunning;
+
     protected Socket[] orderRouters;
     protected Socket[] clients;
     protected Socket trader;
@@ -54,6 +58,7 @@ public class OrderManager {
         // Set up the order manager
         setup(orderRouters, clients, trader);
 
+        startOM();
         // Start doing the main logic
         mainLogic();
     }
@@ -137,8 +142,10 @@ public class OrderManager {
 //        System.out.println("sajsa");
 
         // Constantly check for messages
-        while (true)
-        {
+
+        while (isRunning) {
+
+
             // Check each client / router / trader in turn
             checkClients();
             checkRouters();
@@ -310,11 +317,11 @@ public class OrderManager {
 
         // Iterate over prices and find minimum
         // Route to the minimum
-        if (o.side == 1)
+        if (o.side == 1)//if buying the stock
         {
             o.routerID = findPurchaseRoute(o);
         }
-        if(o.side == 2)
+        else if(o.side == 2)//if selling the stock
         {
             o.routerID = findSalesRoute(o);
         }
@@ -490,8 +497,10 @@ public class OrderManager {
 
     // Router request logic
 
-    // routeOrder bascially just sends the order tot the exchanges and get a price for them
-    // in comparison reallyRouteOrder picks the best price and routes the order to that exchange
+    /*
+    routeOrder basically just sends the order to the exchanges and get a price for them
+    in comparison reallyRouteOrder picks the best price and routes the order to that exchange
+    */
     private void routeOrder(int id, int sliceId, int size, Order order) throws IOException {
 
         ObjectOutputStream os;
@@ -514,14 +523,19 @@ public class OrderManager {
         order.bestPriceCount = 0;
     }
 
-    //TODO - ensure this works properly with david
+
     private void cancelOrder(int orderID) {
         Order o = orders.get(orderID);
         try {
             ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.clientid].getOutputStream());
 
-
-            if (o.OrdStatus == '2') {
+            if (o.OrdStatus == '0')
+            {
+                orders.remove(orderID);
+                generateMessage(os, (int)o.clientOrderID, '4','F',o.side);
+                os.flush();
+            }
+            else if (o.OrdStatus == '2') {
                 generateMessage(os, (int)o.clientOrderID, '8', '9', o.side);
                 os.flush();
             } else {
@@ -535,7 +549,7 @@ public class OrderManager {
                         rmvdContent++;
                     }
                 }
-                generateMessage(os, (int)o.clientOrderID, '4', '9', o.side);
+                generateMessage(os, (int)o.clientOrderID, '4', 'F', o.side);
                 os.flush();
             }
         } catch (IOException e) {
@@ -543,7 +557,7 @@ public class OrderManager {
         }
     }
 
-    //TODO - implement this
+
     private void sendCancel(Order order, Socket routerSocket) {
 //        orderRouter.sendCancel(order);
 //        order.orderRouter.writeObject(order);
@@ -615,6 +629,15 @@ public class OrderManager {
             }
         }
         return maxIndex;
+    }
+
+    public void startOM()
+    {
+        isRunning = true;
+    }
+    public void stopOM()
+    {
+        isRunning = false;
     }
 }
 
