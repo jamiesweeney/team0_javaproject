@@ -30,7 +30,7 @@ public class SampleClient extends Mock implements Client
 	private int id = 0; //message id number
 
 	private Socket omConn; //connection to order manager
-
+	private Order currentOrder;
 
 	private Logger logger = Logger.getLogger(SampleClient.class);
 
@@ -175,13 +175,19 @@ public class SampleClient extends Mock implements Client
 						String[] tag_value=fixTags[i].split("=");
 						switch(tag_value[0])
 						{
-							case"11":OrderId=Integer.parseInt(tag_value[1]);break;
+							case"11":OrderId=Integer.parseInt(tag_value[1]);
+								currentOrder = (Order)OUT_QUEUE.get(OrderId);
+							break;
 							case"35":MsgType=tag_value[1].charAt(0);
 								if(MsgType=='A')whatToDo=methods.newOrderSingleAcknowledgement;
 								if(MsgType=='9')whatToDo= methods.orderCancellationRejected;
 								break;
 							case"39":OrdStatus=tag_value[1].charAt(0);
-								if(OrdStatus=='4')whatToDo=methods.orderCancellationSuccessful;
+								if(OrdStatus=='4') {
+									whatToDo = methods.orderCancellationSuccessful;
+									cancelled(currentOrder);
+								}
+
 							break;
 
 						}
