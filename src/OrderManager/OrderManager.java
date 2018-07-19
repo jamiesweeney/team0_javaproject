@@ -19,10 +19,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.SynchronousQueue;
 
+/**
+ * <h1>OrderManager</h1>
+ * */
 public class OrderManager {
 
 
@@ -45,12 +46,16 @@ public class OrderManager {
 
 
 
+    /**
+     * OrderManager is the reworked constructor of the OrderManager class.
+     * It takes several arguments which are used to initialise it's member variables.
+     * */
     // Constructor
     public OrderManager(InetSocketAddress[] orderRouters,
                         InetSocketAddress[] clients,
                         InetSocketAddress trader,
-                        LiveMarketData liveMarketData) {
-
+                        LiveMarketData liveMarketData)
+    {
         System.out.println("IS this even working");
         PropertyConfigurator.configure("resources/log4j.properties");
         OrderManager.liveMarketData = liveMarketData;
@@ -79,6 +84,10 @@ public class OrderManager {
         }
     }
 
+    /**
+     * setup() is called from the constructor and initialises the trader and routers variables.
+     * This method connects the program through Sockets, which are used to transfer the data.
+     * */
     private void setup(InetSocketAddress[] orderRouters, InetSocketAddress[] clients, InetSocketAddress trader) {
         System.out.println("IS this even working");
 
@@ -111,6 +120,10 @@ public class OrderManager {
     }
 
 
+    /**
+     *connect() takes a Socket as an argument and is used to connect the OrderManager object to the socket it is passed.
+     * The method will attempt a connection 600 times before throwing an error.
+     * */
     // Creates a socket to an address
     private Socket connect(InetSocketAddress location) {
         int tryCounter = 0;
@@ -138,6 +151,13 @@ public class OrderManager {
         - Checks router messages
         - Checks trader messages
      */
+
+    /**
+     * The mainLogic() method contains the core functionality of the object.
+     * It contains a while() loop which will iterate so long as the isRunning variable is true.
+     * Each iteration of the while() loop, the program will check for any inbound messages from the clients, routers and trader.
+     * If data is received, it delegates the manipulation of the data to the appropriate method.
+     * */
     private void mainLogic() {
 //        System.out.println("sajsa");
 
@@ -157,6 +177,11 @@ public class OrderManager {
         Checks the messages for all clients
         Creates a new order if order requests received.
     */
+    /**
+     * checkClients() is called from within the mainLogic() while() loop.
+     * Its objective is to check for any inbound messages from the clients that are connected to the OrderManager object, and creates a new order if
+     * it receives a request for one.
+     * */
     private void checkClients() {
 
 
@@ -223,6 +248,10 @@ public class OrderManager {
     }
 
 
+    /**
+     * addOrder() is used to add the order it is passed to the order collection object: orders.
+     * It adds extra indexing data: the id of the client, and the id of the clients order.
+     * */
     public synchronized int addOrder(int clientId, int clientOrderId, NewOrderSingle nos){
 
         // Create the new order and add to the order array
@@ -234,9 +263,11 @@ public class OrderManager {
     }
 
 
-    /*
-        Sends a new order to the trader through an output stream
-    */
+
+    /**
+     * sendOrderToTrader() is used to pass new orders to the trader using an OutputStream.
+     * This function also throws an IOException.
+     * */
     private void sendOrderToTrader(int id, Order o, Object method) throws IOException {
 
         // Write the order date to the trader stream
@@ -247,9 +278,9 @@ public class OrderManager {
         ost.flush();
     }
 
-    /*
-        Checks the messages for all routers
-    */
+    /**
+     * checkRouters() is used to check for any messages from all the routers contained in orderRouters.
+     */
     private void checkRouters() {
         int routerId;
         Socket router;
@@ -309,8 +340,9 @@ public class OrderManager {
         }
     }
 
-    /*
-        Sends a order slice to the router and best price
+    /**
+     reallyRouteOrder() takes 2 arguments: a slice id and an order.
+     The method then determines whether the order is a buy or a sell, then sends the order to the exchange.
     */
     private void reallyRouteOrder(int sliceId, Order o) throws IOException {
 
@@ -334,9 +366,11 @@ public class OrderManager {
         os.flush();
     }
 
-    /*
-        Creates a new fill order for a order slice
-    */
+
+    /**
+     * newFill() takes arguments for an order id, a slice id, a n order size and a price.
+     * The method then creates a new fill order for an order slice, and passes the order to the trader as a fill.
+     */
     private void newFill(int id, int sliceId, int size, double price) throws IOException {
         Order o = orders.get(id);
         o.slices.get(sliceId).createFill(size, price);
@@ -348,9 +382,11 @@ public class OrderManager {
         sendOrderToTrader(id, o, TradeScreen.api.fill);
     }
 
-    /*
-        Checks the messages for the trader
-    */
+
+    /**
+     * checkTrader() is used to check for any messages for the trader.
+     * If there are messages to process, process them by type, i.e acceptOrder, sliceOrder etc...
+     */
     private void checkTrader() {
         ObjectInputStream is;
 
@@ -383,9 +419,10 @@ public class OrderManager {
         }
     }
 
-    /*
-        If the trader accepts the new order, prices the order
-    */
+    /**
+     * acceptOrder() takes an orderid as an int, and pulls the order from the orders container.
+     * If the order has not already been accepted, the method will generate an output stream and price the order accordingly.
+     * */
     private void acceptOrder(int id) throws IOException {
         Order o = orders.get(id);
 
@@ -407,9 +444,11 @@ public class OrderManager {
         price(id, o);
     }
 
-    /*
-        Updates the live market data
-    */
+
+
+    /**
+     * The price() method is used to update the live market data. Once the market data is updated, the order is sent to the trader.*
+     */
     private void price(int id, Order o) throws IOException {
 
         //TODO - Why do we send back to the trader with the api.price?
@@ -418,8 +457,9 @@ public class OrderManager {
         sendOrderToTrader(id, o, TradeScreen.api.price);
     }
 
-    /*
-        If the trader requested a slice for the new order
+    /**
+     sliceOrder() is called if a trader needs to slice an order. The method takes an id and a slice size
+     which it uses to locate the order to slice it to the desired size.
     */
     private void sliceOrder(int id, int sliceSize) throws IOException {
         System.err.println("1798ojlkfdslkjfdslknfds");
@@ -449,13 +489,12 @@ public class OrderManager {
     }
 
 
-    /*
-        Performs an internal cross, if theres 2 matching buy/sell then match them
+    /**
+        internalCross() performs an internal cross. If there's 2 matching buy/sell then match them.
 
         The internal cross attempts to match 2 trades that can be completed within the OM system
         as opposed to routing it to the exchange. This avoids exchange fees and makes the bank/clients more money
         overall.
-
      */
     private void internalCross(int id, Order o) throws IOException {
 
@@ -497,8 +536,8 @@ public class OrderManager {
 
     // Router request logic
 
-    /*
-    routeOrder basically just sends the order to the exchanges and get a price for them
+    /**
+    routeOrder() basically just sends the order to the exchanges and get a price for them
     in comparison reallyRouteOrder picks the best price and routes the order to that exchange
     */
     private void routeOrder(int id, int sliceId, int size, Order order) throws IOException {
@@ -523,7 +562,11 @@ public class OrderManager {
         order.bestPriceCount = 0;
     }
 
-
+    /**
+     * cancelOrder() takes an order id which references an order in the orders container.
+     * This function then removes the order from the orders container and generates a message with specific tags depending on the
+     * order status.
+     **/
     private void cancelOrder(int orderID) {
         Order o = orders.get(orderID);
         try {
@@ -557,7 +600,10 @@ public class OrderManager {
         }
     }
 
-
+/**
+ * sendCancel() takes an order and a socket as arguments, and using an OutputStream pointed at the router socket,
+ * writes a cancellation message.
+ */
     private void sendCancel(Order order, Socket routerSocket) {
 //        orderRouter.sendCancel(order);
 //        order.orderRouter.writeObject(order);
@@ -579,6 +625,10 @@ public class OrderManager {
         }
     }
 
+    /**
+     * cancelSuccess() takes both an orderID and a sliceID as arguments and works by getting the requested order from
+     * orders and writing a message with 4 as the order status and 9 as the msgType.
+     */
     private void cancelSuccess(int orderID, int sliceID)
     {
         Order o = orders.get(orderID);
@@ -594,6 +644,9 @@ public class OrderManager {
 
     }
 
+    /**
+     * generateMessage() takes in data as arguments and writes the data to an object in a specific format.
+     * */
     private void generateMessage(ObjectOutputStream os, int clientOID, char ordStatus, char msgType, int side)
     {
         try {
@@ -605,6 +658,11 @@ public class OrderManager {
         }
     }
 
+
+    /**
+     * findPurchaseRoute() takes an order as an argument, and works by finding the best
+     * available price for the order, by comparing the values in the bestPrices container.
+     * */
     private int findPurchaseRoute(Order o)
     {
 
@@ -618,6 +676,11 @@ public class OrderManager {
         }
         return minIndex;
     }
+
+    /**
+     * findSalesRoute takes an order as an argument, and based on the values of bestPrices within the order, will return an
+     * int corresponding to the index of the best available price.
+     */
     private int findSalesRoute(Order o)
     {
         int maxIndex = 0;
@@ -631,10 +694,18 @@ public class OrderManager {
         return maxIndex;
     }
 
+
+    /**
+     * startOM() is used to activate the while() loop within mainLogic().
+     * */
     public void startOM()
     {
         isRunning = true;
     }
+
+    /**
+     * stopOM() is used to deactivate the while() loop within mainLogic().
+     * */
     public void stopOM()
     {
         isRunning = false;
