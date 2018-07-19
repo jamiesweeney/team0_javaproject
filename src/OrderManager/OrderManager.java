@@ -477,8 +477,13 @@ public class OrderManager {
         try {
             ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.clientid].getOutputStream());
 
-
-            if (o.OrdStatus == '2') {
+            if (o.OrdStatus == '0')
+            {
+                orders.remove(orderID);
+                generateMessage(os, (int)o.clientOrderID, '4','F',o.side);
+                os.flush();
+            }
+            else if (o.OrdStatus == '2') {
                 generateMessage(os, (int)o.clientOrderID, '8', '9', o.side);
                 os.flush();
             } else {
@@ -492,7 +497,7 @@ public class OrderManager {
                         rmvdContent++;
                     }
                 }
-                generateMessage(os, (int)o.clientOrderID, '4', '9', o.side);
+                generateMessage(os, (int)o.clientOrderID, '4', 'F', o.side);
                 os.flush();
             }
         } catch (IOException e) {
