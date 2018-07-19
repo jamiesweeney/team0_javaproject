@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
@@ -44,6 +45,22 @@ public class OrderManager {
 
         // Start doing the main logic
         mainLogic();
+    }
+
+    //Constructor used to make server take connections and not seek them.
+    //Default server port set to 2025.
+    public OrderManager()
+    {
+        try
+        {
+            Socket omOpenPort = new ServerSocket(2025).accept();
+            logger.info("Server port opened on port 2025 successfully.");
+        }
+        catch(IOException e)
+        {
+            logger.error("IOException caught in OrderManager constructor");
+            e.printStackTrace();
+        }
     }
 
     private void setup(InetSocketAddress[] orderRouters, InetSocketAddress[] clients, InetSocketAddress trader) {
@@ -97,8 +114,8 @@ public class OrderManager {
     private void mainLogic() {
 
         // Constantly check for messages
-        while (true) {
-
+        while (true)
+        {
             // Check each client / router / trader in turn
             checkClients();
             checkRouters();

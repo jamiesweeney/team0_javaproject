@@ -1,6 +1,7 @@
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
@@ -34,7 +35,20 @@ public class SampleClient extends Mock implements Client
 
 	private Logger logger = Logger.getLogger(SampleClient.class);
 
-			
+
+
+	//Constructor used to push connection to OrderManager, and not receive it.
+	public SampleClient()
+	{
+		PropertyConfigurator.configure("resources/log4j.properties");
+
+		omConn = connect(new InetSocketAddress("localhost", 2025));
+		if(omConn == null)
+		{
+			logger.fatal("Client didn't connect after 200 attempts.");
+		}
+	}
+
 	public SampleClient(int port) throws IOException
 	{
 		PropertyConfigurator.configure("resources/log4j.properties");
@@ -43,6 +57,32 @@ public class SampleClient extends Mock implements Client
 		omConn=new ServerSocket(port).accept();
 		logger.info("OM connected to client port "+port);
 	}
+
+
+	public Socket connect(InetSocketAddress serverSocket)
+	{
+		//Replication of OM connector code.
+		//Attempt to connect 200 times before returning an error.
+		int tryCounter = 0;
+		Socket s = null;
+		while(tryCounter < 200)
+		{
+			try
+			{
+				s = new Socket(serverSocket.getHostName(), serverSocket.getPort());
+				s.setKeepAlive(true);
+				break;
+			}
+			catch(IOException e)
+			{
+				logger.error("Client not connected to server!");
+				tryCounter++;
+			}
+		}
+		return s;
+	}
+
+
 
 
 	public int sendRandomOrder() throws IOException
