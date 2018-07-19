@@ -216,7 +216,7 @@ public class SampleClient extends Mock implements Client
 						switch(tag_value[0])
 						{
 							case"11":OrderId=Integer.parseInt(tag_value[1]);
-								currentOrder = (Order)OUT_QUEUE.get(OrderId);
+//								currentOrder = (Order)OUT_QUEUE.get(OrderId);
 							break;
 							case"35":MsgType=tag_value[1].charAt(0);
 								if(MsgType=='A')whatToDo=methods.newOrderSingleAcknowledgement;
