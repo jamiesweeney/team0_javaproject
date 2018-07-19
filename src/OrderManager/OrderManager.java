@@ -18,6 +18,7 @@ import java.net.Socket;
 import java.nio.channels.ServerSocketChannel;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
 
@@ -35,7 +36,7 @@ public class OrderManager {
     private boolean isRunning;
 
     protected Socket[] orderRouters;
-    protected List<Socket> clients = new ArrayList<Socket>();
+    protected List<Socket> clients = new CopyOnWriteArrayList<Socket>();
     protected Socket trader;
     ServerSocketChannel omOpenPort = null;
 
@@ -166,7 +167,7 @@ public class OrderManager {
             // Check each client / router / trader in turn
             if(!clients.isEmpty())
             {
-                System.out.println("In mainLogic, clients is not empty.");
+//                System.out.println("In mainLogic, clients is not empty.");
                 checkClients();
             }
             if(orderRouters.length != 0)
@@ -195,12 +196,11 @@ public class OrderManager {
 
 
         // Iterating over each client
-        for(Socket client0: clients)
-        {
+        for(Socket client0: clients) {
+//            System.out.println(client0.toString());
             client = client0;
+
             try {
-
-
                 // Check if there is any new data
                 if (0 < client.getInputStream().available()) {
 

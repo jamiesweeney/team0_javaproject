@@ -43,7 +43,11 @@ public class SampleClient extends Mock implements Client
 	{
 		PropertyConfigurator.configure("resources/log4j.properties");
 
+		System.out.println("conntected ");
+
 		omConn = connect(new InetSocketAddress("localhost", 2025));
+		System.out.println("conntected ");
+
 		if(omConn == null)
 		{
 			logger.fatal("Client didn't connect after 200 attempts.");
@@ -102,11 +106,14 @@ public class SampleClient extends Mock implements Client
 		show("sendOrder: id="+id+" size="+size+" price="+price+" instrument="+INSTRUMENTS[instid].toString()+" side="+side);
 		OUT_QUEUE.put(id,nos);
 
+		System.out.println("jsajsajsaj");
 
 		// Write the order
 		// newOrderSingle; 35=D; id; nos;
 		if(omConn.isConnected())
 		{
+
+			System.out.println("SENDING");
 			ObjectOutputStream os=new ObjectOutputStream(omConn.socket().getOutputStream());
 			os.writeObject("newOrderSingle");
 			//os.writeObject("35=D;"); TODO - Work out why this crashes
@@ -135,6 +142,7 @@ public class SampleClient extends Mock implements Client
         // newOrderSingle; 35=D; id; nos;
 		if(omConn.isConnected())
 		{
+			System.out.println("SENDINGSENDINGSENDINGSENDINGSENDING");
 			ObjectOutputStream os=new ObjectOutputStream(omConn.socket().getOutputStream());
 			os.writeObject("newOrderSingle");
 			//os.writeObject("35=D;"); TODO - Work out why this crashes

@@ -37,6 +37,18 @@ public class Main
 		//new MockClient("Client 2",2001).start();
 
 		new MockClient("Client 3").start();
+//		new MockClient("Client 4").start();
+//		new MockClient("Client 5").start();
+//		new MockClient("Client 6").start();
+//		new MockClient("Client 7").start();
+//		new MockClient("Client 8").start();
+//		new MockClient("Client 9").start();
+//		new MockClient("Client 10").start();
+//		new MockClient("Client 11").start();
+//		new MockClient("Client 12").start();
+//		new MockClient("Client 13").start();
+
+
 
 		//start sample routers
 		new SampleRouter("Router LSE",2010).start();
@@ -89,6 +101,7 @@ class MockClient extends Thread
 	 * */
 	public void run()
 	{
+
 		try
 		{
 			PropertyConfigurator.configure("resources/log4j.properties");
@@ -104,7 +117,7 @@ class MockClient extends Thread
 				int id=client.sendRandomOrder();
 				id=client.sendRandomOrder();
 				id=client.sendRandomOrder();
-
+				System.out.println(id);
 
 				client.sendCancel(id);
 				client.messageHandler();
@@ -112,8 +125,13 @@ class MockClient extends Thread
 			else
 			{
 //				client.sendRandomOrder();
-				client.messageHandler();
+//				client.messageHandler();
 			}
+
+			System.out.println("sending something");
+
+			client.sendRandomOrder();
+			client.messageHandler();
 
 		}
 		catch (IOException e)
