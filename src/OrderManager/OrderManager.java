@@ -179,10 +179,8 @@ public class OrderManager {
 
                             clientQueue.add(job);
                             break;
-
-                        //TODO create a default case which errors with "Unknown message type"+...
                         default:
-                            logger.error("Error, unknown mesage type: " + method);
+                            logger.error("Error, unknown message type: " + method);
                             break;
                     }
                 }
@@ -292,23 +290,18 @@ public class OrderManager {
     */
     private void reallyRouteOrder(int sliceId, Order o) throws IOException {
 
-        //TODO - this assumes we are buying rather than selling
+
         // Iterate over prices and find minimum
-
-
-        int minIndex = 0;
-        double min = o.bestPrices[0];
-        for (int i = 1; i < o.bestPrices.length; i++) {
-            if (min > o.bestPrices[i]) {
-                minIndex = i;
-                min = o.bestPrices[i];
-            }
-        }
-
-        //TODO - add buy or sell to order message
         // Route to the minimum
-        o.routerID = minIndex;
-        ObjectOutputStream os = new ObjectOutputStream(orderRouters[minIndex].getOutputStream());
+        if (o.side == 1)
+        {
+            o.routerID = findPurchaseRoute(o);
+        }
+        if(o.side == 2)
+        {
+            o.routerID = findSalesRoute(o);
+        }
+        ObjectOutputStream os = new ObjectOutputStream(orderRouters[o.routerID].getOutputStream());
         os.writeObject(Router.api.routeOrder);
         os.writeInt((int) o.id);
         os.writeInt(sliceId);
@@ -579,6 +572,32 @@ public class OrderManager {
         {
             e.printStackTrace();
         }
+    }
+
+    private int findPurchaseRoute(Order o)
+    {
+
+        int minIndex = 0;
+        double min = o.bestPrices[0];
+        for (int i = 1; i < o.bestPrices.length; i++) {
+            if (min > o.bestPrices[i]) {
+                minIndex = i;
+                min = o.bestPrices[i];
+            }
+        }
+        return minIndex;
+    }
+    private int findSalesRoute(Order o)
+    {
+        int maxIndex = 0;
+        double max = o.bestPrices[0];
+        for (int i = 1; i < o.bestPrices.length; i++) {
+            if (max < o.bestPrices[i]) {
+                maxIndex = i;
+                max = o.bestPrices[i];
+            }
+        }
+        return maxIndex;
     }
 }
 
