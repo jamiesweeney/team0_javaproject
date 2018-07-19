@@ -10,44 +10,59 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.Queue;
 
-import static OrderRouter.Router.api.sendCancel;
 
+/** Runs in the background, takes in incoming messages from the client message queue
+ *  and deals with them.
+ *
+ */
 public class ClientWorkerThread implements Runnable{
 
     private Logger logger = Logger.getLogger(OrderManager.class);
     Queue<OrderJob> inputQ;
     OrderManager om;
 
+    /** Constructor
+     *
+     * @param inputQ the queue that holds the incoming orders, shared between threads
+     * @param om the order manager, used to access OM variables
+     */
     ClientWorkerThread(Queue inputQ,OrderManager om){
         this.inputQ = inputQ;
         this.om=om;
-        System.out.println("!!!!!!!!!");
     }
 
+
+    /** Runs the worker thread process
+     * Constantly checks for new messages in the queue and deals with them
+     *
+     */
     @Override
     public void run() {
 
-
-        System.out.println("?????");
         OrderJob job;
-
         int id;
+        int clientId;
+        int clientOrderId;
+        NewOrderSingle nos;
 
+        // Constantly checks for new messages
         while (true){
             if ((job = inputQ.poll()) != null){
-                System.out.println("Worker has a job to do");
 
+                //
                 switch (job.method) {
                         // If a new order single, we want to create a new Order object
                         case "newOrderSingle":
 
-                            int clientId = (int)job.args.get(0);
-                            int clientOrderId = (int) job.args.get(1);
-                            NewOrderSingle nos = (NewOrderSingle) job.args.get(2);
+                            // Get info from job
+                            clientId = (int)job.args.get(0);
+                            clientOrderId = (int) job.args.get(1);
+                            nos = (NewOrderSingle) job.args.get(2);
 
+                            // Add the order ot OM
                             id = om.addOrder(clientId, clientOrderId, nos);
 
-                            // Send a message to the client
+                            // Send a message to the client and to the trader
                             ObjectOutputStream os = null;
                             try {
                                 os = new ObjectOutputStream(om.clients[clientId].getOutputStream());
@@ -60,23 +75,27 @@ public class ClientWorkerThread implements Runnable{
                                 e.printStackTrace();
                             }
 
-
-
-                            // Send this order to the trading screen
-
                             break;
+
+                        // If a send cancel message type
                         case "sendCancel":
                             id = (int)job.args.get(0);
 
+                            // Get the order type
                             Order o = om.orders.get(id);
+
+                            // cancel if the order has not been routed
                             if (o.routeCode == 0) {
                                 cancelOrder(id);
                             }
+
+                            // send a cancel request to the router if the order has been routed
                             if (o.routeCode == 2) {
                                 sendCancel(o, om.orderRouters[o.routerID]);
                             }
                             break;
-                        //TODO create a default case which errors with "Unknown message type"+...
+
+
                         default:
                             logger.error("Error, unknown mesage type: " + job.method);
                             break;
@@ -85,6 +104,15 @@ public class ClientWorkerThread implements Runnable{
         }
     }
 
+
+    /** Taken from the OM, simply generates a message and passes it through the output stream
+     *
+     * @param os the output stream where we want to send the message
+     * @param clientOID the client order id, the unique id for the client order
+     * @param ordStatus the order status, tag number 39
+     * @param msgType the message type, tag number 39
+     * @param side the side, 1 for buy 2 for sell
+     */
     private void generateMessage(ObjectOutputStream os, int clientOID, char ordStatus, char msgType, int side)
     {
         try {
@@ -96,7 +124,13 @@ public class ClientWorkerThread implements Runnable{
         }
     }
 
-
+    /** Forwards a new order to the trader for decision.
+     *
+     * @param id the OM order id
+     * @param o the order object itself
+     * @param method the type of message we are sending
+     * @throws IOException
+     */
     private void sendOrderToTrader(int id, Order o, Object method) throws IOException {
 
         // Write the order date to the trader stream
@@ -107,16 +141,23 @@ public class ClientWorkerThread implements Runnable{
         ost.flush();
     }
 
-    //TODO - implement this
+    /** Handles a cancel order message from the client
+     *
+     * @param orderID
+     */
+
+
     private void cancelOrder(int orderID) {
         Order o = om.orders.get(orderID);
         try {
             ObjectOutputStream os = new ObjectOutputStream(om.clients[(int) o.clientid].getOutputStream());
 
-
+            // If the order has been fufilled, send rejected cancel message
             if (o.OrdStatus == '2') {
                 generateMessage(os, (int)o.clientOrderID, '8', '9', o.side);
                 os.flush();
+
+            // If not then cancel each slice in turn
             } else {
                 int rmvdContent = 0;
                 int filledCount = 0;
@@ -128,6 +169,8 @@ public class ClientWorkerThread implements Runnable{
                         rmvdContent++;
                     }
                 }
+
+                // Send back a cancelled message
                 generateMessage(os, (int)o.clientOrderID, '4', '9', o.side);
                 os.flush();
             }
@@ -137,6 +180,12 @@ public class ClientWorkerThread implements Runnable{
     }
 
 
+    /** Attempts to cancel a routed order by requesting the router
+     * to cancel it.
+     *
+     * @param order the order we wish to cancel
+     * @param routerSocket the socket that the router is connected to
+     */
     private void sendCancel(Order order, Socket routerSocket) {
         try {
             ObjectOutputStream os;
