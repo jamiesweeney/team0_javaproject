@@ -110,6 +110,13 @@ class MockClient extends Thread
 				int id=client.sendRandomOrder();
 				id=client.sendRandomOrder();
 				id=client.sendRandomOrder();
+				id=client.sendRandomOrder();
+				id=client.sendRandomOrder();
+				id=client.sendRandomOrder();
+				id=client.sendRandomOrder();
+
+
+
 				
 //				id=client.sendRandomOrder();
 //				id=client.sendRandomOrder();

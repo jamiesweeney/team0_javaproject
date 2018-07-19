@@ -46,8 +46,8 @@ public class Order implements Serializable {
      * @param size the size of the order
      * @param side 1 for buy, 2 for sell
      */
-    public Order(long clientId, long ClientOrderID, Instrument instrument, int size, int side) {
-        this.clientOrderID = ClientOrderID;
+    public Order(long clientId, long clientOrderID, Instrument instrument, int size, int side) {
+        this.clientOrderID = clientOrderID;
         this.size = size;
         this.clientID = clientID;
         this.instrument = instrument;
@@ -267,9 +267,12 @@ public class Order implements Serializable {
     public void setBestPriceCount(long bestPriceCount) {
         this.bestPriceCount = bestPriceCount;
     }
+
     public double getInitialMarketPrice() {
         return this.initialMarketPrice;
     }
+
+    public void setInitialMarketPrice(double marketPrice) { this.initialMarketPrice = marketPrice; }
 
     public char getOrdStatus() {
         return this.ordStatus;

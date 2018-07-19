@@ -121,7 +121,7 @@ public class Screen extends Application implements Runnable
             System.out.println(index);
             Button button = buttons.get(index);
             Platform.runLater(() -> {
-                button.setText("" + order.id);
+                button.setText("" + order.getClientOrderID());
             });
         }
     }

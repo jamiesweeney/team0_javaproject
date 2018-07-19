@@ -363,7 +363,7 @@ public class OrderManager {
         {
             o.setRouterID(findSalesRoute(o));
         }
-        ObjectOutputStream os = new ObjectOutputStream(orderRouters[o.getRouterID].getOutputStream());
+        ObjectOutputStream os = new ObjectOutputStream(orderRouters[o.getRouterID()].getOutputStream());
         os.writeObject(Router.api.routeOrder);
         os.writeInt((int) o.getOmID());
         os.writeInt(sliceId);
@@ -443,7 +443,7 @@ public class OrderManager {
         ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.getClientID()].getOutputStream());
 
         // Write acknowledgement to the client
-        generateMessage(os, (int)o.getClientOrderID, '2', '8', o.getSide);
+        generateMessage(os, (int)o.getClientOrderID(), '2', '8', o.getSide());
         os.flush();
 
         // price the order
@@ -576,14 +576,14 @@ public class OrderManager {
         Order o = orders.get(orderID);
         try {
             ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.getClientID()].getOutputStream());
-            if (o.OrdStatus == '0')
+            if (o.getOrdStatus() == '0')
             {
                 orders.remove(orderID);
-                generateMessage(os, (int)o.clientOrderID, '4','F',o.getSide());
+                generateMessage(os, (int)o.getClientOrderID(), '4','F',o.getSide());
                 os.flush();
             }
-            else if (o.OrdStatus == '2') {
-                generateMessage(os, (int)o.clientOrderID, '8', '9', o.getSide());
+            else if (o.getOrdStatus() == '2') {
+                generateMessage(os, (int)o.getClientOrderID(), '8', '9', o.getSide());
                 os.flush();
             } else {
                 int rmvdContent = 0;
@@ -596,7 +596,7 @@ public class OrderManager {
                         rmvdContent++;
                     }
                 }
-                generateMessage(os, (int)o.getClientOrderID, '2', '9', o.getSide());
+                generateMessage(os, (int)o.getClientOrderID(), '2', '9', o.getSide());
                 os.flush();
             }
         } catch (IOException e) {
@@ -671,11 +671,11 @@ public class OrderManager {
     {
 
         int minIndex = 0;
-        double minPrice = o.bestPrices[0];
-        for (int i = 1; i < o.bestPrices.length; i++) {
-            if (minPrice > o.bestPrices[i]) {
+        double minPrice = o.getBestPrices()[0];
+        for (int i = 1; i < o.getBestPrices().length; i++) {
+            if (minPrice > o.getBestPrices()[i]) {
                 minIndex = i;
-                minPrice = o.bestPrices[i];
+                minPrice = o.getBestPrices()[i];
             }
         }
         return minIndex;
@@ -688,11 +688,11 @@ public class OrderManager {
     private int findSalesRoute(Order o)
     {
         int maxIndex = 0;
-        double maxPrice = o.bestPrices[0];
-        for (int i = 1; i < o.bestPrices.length; i++) {
-            if (maxPrice < o.bestPrices[i]) {
+        double maxPrice = o.getBestPrices()[0];
+        for (int i = 1; i < o.getBestPrices().length; i++) {
+            if (maxPrice < o.getBestPrices()[i]) {
                 maxIndex = i;
-                maxPrice = o.bestPrices[i];
+                maxPrice = o.getBestPrices()[i];
             }
         }
         return maxIndex;
