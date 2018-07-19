@@ -19,10 +19,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.SynchronousQueue;
 
+/**
+ * <h1>OrderManager</h1>
+ * */
 public class OrderManager {
 
 
@@ -45,12 +46,16 @@ public class OrderManager {
 
 
 
+    /**
+     * OrderManager is the reworked constructor of the OrderManager class.
+     * It takes several arguments which are used to initialise it's member variables.
+     * */
     // Constructor
     public OrderManager(InetSocketAddress[] orderRouters,
                         InetSocketAddress[] clients,
                         InetSocketAddress trader,
-                        LiveMarketData liveMarketData) {
-
+                        LiveMarketData liveMarketData)
+    {
         System.out.println("IS this even working");
         PropertyConfigurator.configure("resources/log4j.properties");
         OrderManager.liveMarketData = liveMarketData;
@@ -79,6 +84,10 @@ public class OrderManager {
         }
     }
 
+    /**
+     * setup() is called from the constructor and initialises the trader and routers variables.
+     * This method connects the program through Sockets, which are used to transfer the data.
+     * */
     private void setup(InetSocketAddress[] orderRouters, InetSocketAddress[] clients, InetSocketAddress trader) {
         System.out.println("IS this even working");
 
@@ -111,6 +120,10 @@ public class OrderManager {
     }
 
 
+    /**
+     *connect() takes a Socket as an argument and is used to connect the OrderManager object to the socket it is passed.
+     * The method will attempt a connection 600 times before throwing an error.
+     * */
     // Creates a socket to an address
     private Socket connect(InetSocketAddress location) {
         int tryCounter = 0;
@@ -138,6 +151,13 @@ public class OrderManager {
         - Checks router messages
         - Checks trader messages
      */
+
+    /**
+     * The mainLogic() method contains the core functionality of the object.
+     * It contains a while() loop which will iterate so long as the isRunning variable is true.
+     * Each iteration of the while() loop, the program will check for any inbound messages from the clients, routers and trader.
+     * If data is received, it delegates the manipulation of the data to the appropriate method.
+     * */
     private void mainLogic() {
 //        System.out.println("sajsa");
 
@@ -157,6 +177,11 @@ public class OrderManager {
         Checks the messages for all clients
         Creates a new order if order requests received.
     */
+    /**
+     * checkClients() is called from within the mainLogic() while() loop.
+     * Its objective is to check for any inbound messages from the clients that are connected to the OrderManager object, and creates a new order if
+     * it receives a request for one.
+     * */
     private void checkClients() {
 
 
@@ -223,6 +248,10 @@ public class OrderManager {
     }
 
 
+    /**
+     * addOrder() is used to add the order it is passed to the order collection object: orders.
+     * It adds extra indexing data: the id of the client, and the id of the clients order.
+     * */
     public synchronized int addOrder(int clientId, int clientOrderId, NewOrderSingle nos){
 
         // Create the new order and add to the order array
@@ -234,9 +263,11 @@ public class OrderManager {
     }
 
 
-    /*
-        Sends a new order to the trader through an output stream
-    */
+
+    /**
+     * sendOrderToTrader() is used to pass new orders to the trader using an OutputStream.
+     * This function also throws an IOException.
+     * */
     private void sendOrderToTrader(int id, Order o, Object method) throws IOException {
 
         // Write the order date to the trader stream
@@ -247,9 +278,10 @@ public class OrderManager {
         ost.flush();
     }
 
-    /*
-        Checks the messages for all routers
-    */
+    /**
+     * checkRouters() is used to check for any messages from all the routers contained in orderRouters.
+     *
+     */
     private void checkRouters() {
         int routerId;
         Socket router;
@@ -337,6 +369,10 @@ public class OrderManager {
     /*
         Creates a new fill order for a order slice
     */
+    /**
+     * newFill() takes arguments for an order id, a slice id, a n order size and a price.
+     * The method then creates a new fill order for an order slice, and passes the order to the trader as a fill.
+     */
     private void newFill(int id, int sliceId, int size, double price) throws IOException {
         Order o = orders.get(id);
         o.slices.get(sliceId).createFill(size, price);
@@ -348,9 +384,11 @@ public class OrderManager {
         sendOrderToTrader(id, o, TradeScreen.api.fill);
     }
 
-    /*
-        Checks the messages for the trader
-    */
+
+    /**
+     * checkTrader() is used to check for any messages for the trader.
+     * If there are messages to process, process them by type, i.e acceptOrder, sliceOrder etc...
+     */
     private void checkTrader() {
         ObjectInputStream is;
 
