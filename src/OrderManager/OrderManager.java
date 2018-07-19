@@ -16,6 +16,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -36,7 +37,7 @@ public class OrderManager {
     private boolean isRunning;
 
     protected Socket[] orderRouters;
-    protected List<Socket> clients = new CopyOnWriteArrayList<Socket>();
+    protected List<SocketChannel> clients = new CopyOnWriteArrayList<SocketChannel>();
     protected Socket trader;
     ServerSocketChannel omOpenPort = null;
 
@@ -154,7 +155,7 @@ public class OrderManager {
         - Checks trader messages
      */
     private void mainLogic() {
-//        System.out.println("sajsa");
+
 
         // Constantly check for messages
 
@@ -185,31 +186,30 @@ public class OrderManager {
     */
     private void checkClients()
     {
-        Socket client;
+        System.out.println("Entered check clients in OrderManager.");
+        //Socket client;
         ObjectInputStream is;
         ArrayList<Object> args;
         OrderJob job;
 
 
         // Iterating over each client
-        for(Socket client0: clients) {
-//            System.out.println(client0.toString());
-            client = client0;
+        for(SocketChannel client: clients) {
+           System.out.println(client.toString() + "is being processed by the for loop.");
 
             try {
                 // Check if there is any new data
-                if (0 < client.getInputStream().available()) {
+                if (0 < client.socket().getInputStream().available()) {
+                    System.out.println("OrderManager:checkClients(), client input stream available.");
 
-                    System.out.println("OrderMAnager:checkClients(), client input stream available.");
-
-                    is = new ObjectInputStream(client.getInputStream()); //create an object inputstream, this is a pretty stupid way of doing it, why not create it once rather than every time around the loop
+                    is = new ObjectInputStream(client.socket().getInputStream()); //create an object inputstream, this is a pretty stupid way of doing it, why not create it once rather than every time around the loop
                     String method = (String) is.readObject();
 
                     switch (method) {
                         // If a new order single, we want to create a new Order object
                         case "newOrderSingle":
                             args = new ArrayList<>();
-                            args.add(clients.indexOf(client0));
+                            args.add(clients.indexOf(client));
                             args.add(is.readInt());
                             args.add(is.readObject());
 
@@ -422,7 +422,7 @@ public class OrderManager {
 
         // If not then the order must be new
         o.OrdStatus = '0';
-        ObjectOutputStream os = new ObjectOutputStream(clients.get((int)o.clientid).getOutputStream());
+        ObjectOutputStream os = new ObjectOutputStream(clients.get((int)o.clientid).socket().getOutputStream());
 
         // Write acknowledgement to the client
         generateMessage(os, (int)o.clientOrderID, 'A', 'D', o.side);
@@ -552,7 +552,7 @@ public class OrderManager {
     private void cancelOrder(int orderID) {
         Order o = orders.get(orderID);
         try {
-            ObjectOutputStream os = new ObjectOutputStream(clients.get((int) o.clientid).getOutputStream());
+            ObjectOutputStream os = new ObjectOutputStream(clients.get((int) o.clientid).socket().getOutputStream());
 
             if (o.OrdStatus == '0')
             {
@@ -609,7 +609,7 @@ public class OrderManager {
         Order o = orders.get(orderID);
         try
         {
-            ObjectOutputStream os = new ObjectOutputStream(clients.get((int) o.clientid).getOutputStream());
+            ObjectOutputStream os = new ObjectOutputStream(clients.get((int) o.clientid).socket().getOutputStream());
             generateMessage(os, (int)o.clientOrderID, '4', '9', o.side);
             os.flush();
         }

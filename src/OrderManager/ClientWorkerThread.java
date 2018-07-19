@@ -50,7 +50,7 @@ public class ClientWorkerThread implements Runnable{
                             // Send a message to the client
                             ObjectOutputStream os = null;
                             try {
-                                os = new ObjectOutputStream(om.clients.get(clientId).getOutputStream());
+                                os = new ObjectOutputStream(om.clients.get(clientId).socket().getOutputStream());
 
                                 generateMessage(os, clientOrderId, 'A', 'D', nos.side);
                                 os.flush();
@@ -111,7 +111,7 @@ public class ClientWorkerThread implements Runnable{
     private void cancelOrder(int orderID) {
         Order o = om.orders.get(orderID);
         try {
-            ObjectOutputStream os = new ObjectOutputStream(om.clients.get((int) o.clientid).getOutputStream());
+            ObjectOutputStream os = new ObjectOutputStream(om.clients.get((int) o.clientid).socket().getOutputStream());
 
 
             if (o.OrdStatus == '2') {

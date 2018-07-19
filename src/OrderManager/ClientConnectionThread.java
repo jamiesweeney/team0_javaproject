@@ -29,7 +29,7 @@ public class ClientConnectionThread implements Runnable{
                 System.out.println("Waiting for a client");
                 SocketChannel a = om.omOpenPort.accept();
                 System.out.println("Got a client");
-                om.clients.add(a.socket());
+                om.clients.add(a);
             }catch(IOException e){
                 logger.error("IOException with omOpenPort.accept()");
             }
