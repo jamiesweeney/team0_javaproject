@@ -24,8 +24,10 @@ public class Trader extends Thread implements TradeScreen{
 		this.setName(name);
 		this.port=port;
 	}
+
 	ObjectInputStream  is;
 	ObjectOutputStream os;
+
 	public void run(){
 		//OM will connect to us
 		try {
@@ -61,6 +63,8 @@ public class Trader extends Thread implements TradeScreen{
 	@Override
 	public void newOrder(int id,Order order) throws IOException, InterruptedException {
 		//TODO the order should go in a visual grid, but not needed for test purposes
+		//TradeScreen.Screen screen = new TradeScreen.Screen();
+		//screen.newOrder(id, order);
 		Thread.sleep(2134);
 		orders.put(id, order);
 		acceptOrder(id);
@@ -82,6 +86,7 @@ public class Trader extends Thread implements TradeScreen{
 		os.writeInt(sliceSize);
 		os.flush();
 	}
+
 	@Override
 	public void price(int id,Order o) throws InterruptedException, IOException {
 		//TODO should update the trade screen

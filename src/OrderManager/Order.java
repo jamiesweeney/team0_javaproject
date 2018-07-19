@@ -5,6 +5,11 @@ import java.util.ArrayList;
 
 import Ref.Instrument;
 
+
+/**
+ *<h1>Order</h1>
+ * The order class implements Serializable and is used as the standard format for orders.
+ * */
 public class Order implements Serializable {
 
     // Instance variables
@@ -33,8 +38,15 @@ public class Order implements Serializable {
     private double initialMarketPrice;
 
 
-    // Constructor
-    public Order(long clientID, long ClientOrderID, Instrument instrument, int size, int side) {
+    /** The constructer for the order object
+     *
+     * @param clientId the id of the client that the order belongs to
+     * @param ClientOrderID the unique id for the client order
+     * @param instrument the instrument that the order was for
+     * @param size the size of the order
+     * @param side 1 for buy, 2 for sell
+     */
+    public Order(long clientId, long ClientOrderID, Instrument instrument, int size, int side) {
         this.clientOrderID = ClientOrderID;
         this.size = size;
         this.clientID = clientID;
@@ -45,7 +57,11 @@ public class Order implements Serializable {
     }
 
 
-    // Returns the total of slice sizes i.e total size places
+
+    /** Returns the total of slice sizes i.e total size places
+     *
+     * @return int the total size of all slices
+     */
     public int sliceSizes() {
         int totalSizeOfSlices = 0;
         for (Order c : slices){
@@ -54,13 +70,21 @@ public class Order implements Serializable {
         return totalSizeOfSlices;
     }
 
+    /** Creates a new slice object
+     *
+     * @param sliceSize the amount that we wish to slice off
+     * @return
+     */
     // Adds a new to the slice array, returns the slice index
     public int newSlice(int sliceSize) {
         slices.add(new Order(omID, clientOrderID, instrument, sliceSize, side));
         return slices.size() - 1;
     }
 
-    // Returns the total amount of the order filled
+    /** Returns the amount of the order that has already been filled
+     *
+     * @return int the amount filled already
+     */
     public long sizeFilled() {
         int filledSoFar = 0;
         for (Fill f : fills) {
@@ -72,13 +96,20 @@ public class Order implements Serializable {
         return filledSoFar;
     }
 
-    // Returns the size left to fill
+
+    /** Returns the amount of the order that is yet to fill
+     *
+     * @return int the amount of order still to be filled
+     */
     public long sizeRemaining() {
         return size - sizeFilled();
     }
 
 
-
+    /**
+     *
+      * @return
+     */
     float price() {
         //TODO this is buggy as it doesn't take account of slices. Let them fix it
         float sum = 0;
@@ -88,6 +119,12 @@ public class Order implements Serializable {
         return sum / fills.size();
     }
 
+
+    /** Partially fills the order
+     *
+     * @param size size of the order to be filled
+     * @param price price of the order to be filled
+     */
     // Makes a new fill
     void createFill(long size, double price) {
         fills.add(new Fill(size, price));
@@ -98,7 +135,10 @@ public class Order implements Serializable {
         }
     }
 
-    //
+    /** Crosses the orded with a matching order
+     *
+     * @param matchingOrder the matching order that we wish to cross with
+     */
     void cross(Order matchingOrder) {
         //pair slices first and then parent
         for (Order slice : slices) {
