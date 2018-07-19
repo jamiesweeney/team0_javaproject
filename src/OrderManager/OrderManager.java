@@ -56,14 +56,16 @@ public class OrderManager {
                         InetSocketAddress trader,
                         LiveMarketData liveMarketData)
     {
-        System.out.println("IS this even working");
         PropertyConfigurator.configure("resources/log4j.properties");
         OrderManager.liveMarketData = liveMarketData;
 
         // Set up the order manager
         setup(orderRouters, clients, trader);
 
+
         startOM();
+
+
         // Start doing the main logic
         mainLogic();
     }
@@ -89,12 +91,10 @@ public class OrderManager {
      * This method connects the program through Sockets, which are used to transfer the data.
      * */
     private void setup(InetSocketAddress[] orderRouters, InetSocketAddress[] clients, InetSocketAddress trader) {
-        System.out.println("IS this even working");
-
-
 
         // Set up trader connection
         this.trader = connect(trader);
+
 
         // Fill order routers with connections
         int i = 0;
@@ -103,6 +103,7 @@ public class OrderManager {
             this.orderRouters[i++] = connect(location);
         }
 
+
         // Fill clients with connections
         i = 0;
         this.clients = new Socket[clients.length];
@@ -110,13 +111,13 @@ public class OrderManager {
             this.clients[i++] = connect(location);
         }
 
+
         // Set up incoming messages queues
         clientQueue = new LinkedBlockingQueue<>();
 
         // Initiate our message handling threads
         Thread t = new Thread(new ClientWorkerThread(clientQueue ,this));
         t.start();
-        System.out.println("IS this even working");
     }
 
 
@@ -135,7 +136,7 @@ public class OrderManager {
                 // Create the socket
                 s = new Socket(location.getHostName(), location.getPort());
                 s.setKeepAlive(true);
-                break;
+                return s;
             } catch (IOException e) {
                 tryCounter++;
             }
@@ -191,6 +192,7 @@ public class OrderManager {
         ObjectInputStream is;
         ArrayList<Object> args;
         OrderJob job;
+//        System.out.println("in checkCLients");
 
 
         // Iterating over each client
@@ -202,6 +204,8 @@ public class OrderManager {
             try {
                 // Check if there is any new data
                 if (0 < client.getInputStream().available()) {
+
+                    System.out.println("Got a message");
 
                     is = new ObjectInputStream(client.getInputStream()); //create an object inputstream, this is a pretty stupid way of doing it, why not create it once rather than every time around the loop
                     String method = (String) is.readObject();
@@ -228,6 +232,7 @@ public class OrderManager {
 
                             clientQueue.add(job);
                             break;
+
                         default:
                             logger.error("Error, unknown message type: " + method);
                             break;
@@ -462,7 +467,6 @@ public class OrderManager {
      which it uses to locate the order to slice it to the desired size.
     */
     private void sliceOrder(int id, int sliceSize) throws IOException {
-        System.err.println("1798ojlkfdslkjfdslknfds");
 
         Order o = orders.get(id);
 

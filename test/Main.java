@@ -33,10 +33,9 @@ public class Main
 		logger.info("TEST: this program tests OrderManager");
 
 		//start sample clients
-		//new MockClient("Client 1",2000).start();
-		//new MockClient("Client 2",2001).start();
+		new MockClient("Client 1",2000).start();
+		new MockClient("Client 2",2001).start();
 
-		new MockClient("Client 3").start();
 
 		//start sample routers
 		new SampleRouter("Router LSE",2010).start();
@@ -55,8 +54,8 @@ public class Main
 
 		LiveMarketData liveMarketData = new SampleLiveMarketData();
 
-		//new MockOM("Order Manager",routers,clients,trader,liveMarketData).start();
-		new MockOM("MockOM").start();
+		new MockOM("Order Manager",routers,clients,trader,liveMarketData).start();
+//		new MockOM("MockOM").start();
 	}
 }
 
@@ -92,8 +91,8 @@ class MockClient extends Thread
 		try
 		{
 			PropertyConfigurator.configure("resources/log4j.properties");
-			SampleClient client = new SampleClient();
-			//SampleClient client=new SampleClient(port);
+//			SampleClient client = new SampleClient();
+			SampleClient client=new SampleClient(port);
 
 			if(port==2000)
 			{
@@ -102,17 +101,17 @@ class MockClient extends Thread
 //				client.sendRandomOrder();
 
 				int id=client.sendRandomOrder();
-				id=client.sendRandomOrder();
-				id=client.sendRandomOrder();
+//				id=client.sendRandomOrder();
+//				id=client.sendRandomOrder();
 
 
-				client.sendCancel(id);
+//				client.sendCancel(id);
 				client.messageHandler();
 			}
 			else
 			{
 //				client.sendRandomOrder();
-				client.messageHandler();
+//				client.messageHandler();
 			}
 
 		}

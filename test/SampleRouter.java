@@ -117,7 +117,6 @@ public class SampleRouter extends Thread implements Router
 		os.flush();
 	}
 
-	@Override
     public void sendCancel(int id,
                            int sliceId,
                            int size,
