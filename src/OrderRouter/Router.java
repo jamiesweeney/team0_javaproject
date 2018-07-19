@@ -5,20 +5,20 @@ import Ref.Instrument;
 
 public interface Router
 {
-	public enum api{routeOrder, sendCancel, priceAtSize};
+	enum api{routeOrder, sendCancel, priceAtSize};
 
-	public void routeOrder(int id,
+	void routeOrder(int id,
 						   int sliceId,
 						   int size,
 						   Instrument i)
 			               throws IOException, InterruptedException;
 
-	public void sendCancel(int id,
+	void sendCancel(int id,
 						   int sliceId,
 						   int size,
 						   Instrument i);
 
-	public void priceAtSize(int id,
+	void priceAtSize(int id,
 							int sliceId,
 							Instrument i,
 							int size)
