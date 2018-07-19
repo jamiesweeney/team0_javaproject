@@ -667,11 +667,11 @@ public class OrderManager {
     {
 
         int minIndex = 0;
-        double min = o.bestPrices[0];
+        double minPrice = o.bestPrices[0];
         for (int i = 1; i < o.bestPrices.length; i++) {
-            if (min > o.bestPrices[i]) {
+            if (minPrice > o.bestPrices[i]) {
                 minIndex = i;
-                min = o.bestPrices[i];
+                minPrice = o.bestPrices[i];
             }
         }
         return minIndex;
@@ -684,11 +684,11 @@ public class OrderManager {
     private int findSalesRoute(Order o)
     {
         int maxIndex = 0;
-        double max = o.bestPrices[0];
+        double maxPrice = o.bestPrices[0];
         for (int i = 1; i < o.bestPrices.length; i++) {
-            if (max < o.bestPrices[i]) {
+            if (maxPrice < o.bestPrices[i]) {
                 maxIndex = i;
-                max = o.bestPrices[i];
+                maxPrice = o.bestPrices[i];
             }
         }
         return maxIndex;
