@@ -37,16 +37,16 @@ public class Main
 		//new MockClient("Client 2",2001).start();
 
 		new MockClient("Client 3").start();
-//		new MockClient("Client 4").start();
-//		new MockClient("Client 5").start();
-//		new MockClient("Client 6").start();
-//		new MockClient("Client 7").start();
-//		new MockClient("Client 8").start();
-//		new MockClient("Client 9").start();
-//		new MockClient("Client 10").start();
-//		new MockClient("Client 11").start();
-//		new MockClient("Client 12").start();
-//		new MockClient("Client 13").start();
+		new MockClient("Client 4").start();
+		new MockClient("Client 5").start();
+		new MockClient("Client 6").start();
+		new MockClient("Client 7").start();
+		new MockClient("Client 8").start();
+		new MockClient("Client 9").start();
+		new MockClient("Client 10").start();
+		new MockClient("Client 11").start();
+		new MockClient("Client 12").start();
+		new MockClient("Client 13").start();
 
 
 
@@ -128,7 +128,7 @@ class MockClient extends Thread
 //				client.messageHandler();
 			}
 
-			System.out.println("sending something");
+			System.out.println(this.getName() + " sending data");
 
 			client.sendRandomOrder();
 			client.messageHandler();

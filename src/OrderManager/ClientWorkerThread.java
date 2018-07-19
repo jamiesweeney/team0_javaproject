@@ -21,14 +21,14 @@ public class ClientWorkerThread implements Runnable{
     ClientWorkerThread(Queue inputQ,OrderManager om){
         this.inputQ = inputQ;
         this.om=om;
-        System.out.println("!!!!!!!!!");
+        System.out.println("Exiting ClientWorkerThread constructor.");
     }
 
     @Override
     public void run() {
 
 
-        System.out.println("?????");
+        System.out.println("Entered ClientWorkerThread run() method.");
         OrderJob job;
 
         int id;
@@ -78,7 +78,7 @@ public class ClientWorkerThread implements Runnable{
                             break;
                         //TODO create a default case which errors with "Unknown message type"+...
                         default:
-                            logger.error("Error, unknown mesage type: " + job.method);
+                            logger.error("Error, unknown message type: " + job.method);
                             break;
                 }
             }

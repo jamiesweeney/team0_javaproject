@@ -2,8 +2,6 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.nio.channels.SocketChannel;
 import java.util.HashMap;
 import java.util.Random;
@@ -43,10 +41,10 @@ public class SampleClient extends Mock implements Client
 	{
 		PropertyConfigurator.configure("resources/log4j.properties");
 
-		System.out.println("conntected ");
+		System.out.println("Entered SampleClient constructor ");
 
 		omConn = connect(new InetSocketAddress("localhost", 2025));
-		System.out.println("conntected ");
+		System.out.println("omConn connected: " + omConn.toString());
 
 		if(omConn == null)
 		{
@@ -106,14 +104,11 @@ public class SampleClient extends Mock implements Client
 		show("sendOrder: id="+id+" size="+size+" price="+price+" instrument="+INSTRUMENTS[instid].toString()+" side="+side);
 		OUT_QUEUE.put(id,nos);
 
-		System.out.println("jsajsajsaj");
 
 		// Write the order
 		// newOrderSingle; 35=D; id; nos;
 		if(omConn.isConnected())
 		{
-
-			System.out.println("SENDING");
 			ObjectOutputStream os=new ObjectOutputStream(omConn.socket().getOutputStream());
 			os.writeObject("newOrderSingle");
 			//os.writeObject("35=D;"); TODO - Work out why this crashes
@@ -142,7 +137,7 @@ public class SampleClient extends Mock implements Client
         // newOrderSingle; 35=D; id; nos;
 		if(omConn.isConnected())
 		{
-			System.out.println("SENDINGSENDINGSENDINGSENDINGSENDING");
+			System.out.println("SampleClient sending order.");
 			ObjectOutputStream os=new ObjectOutputStream(omConn.socket().getOutputStream());
 			os.writeObject("newOrderSingle");
 			//os.writeObject("35=D;"); TODO - Work out why this crashes

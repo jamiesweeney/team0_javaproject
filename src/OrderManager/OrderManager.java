@@ -122,10 +122,6 @@ public class OrderManager {
         Thread th = new Thread(new ClientConnectionThread(this));
         th.start();
         System.out.println("Leaving Setup in OrderMananger");
-
-
-
-
     }
 
 
@@ -204,7 +200,7 @@ public class OrderManager {
                 // Check if there is any new data
                 if (0 < client.getInputStream().available()) {
 
-                    System.out.println("got a message");
+                    System.out.println("OrderMAnager:checkClients(), client input stream available.");
 
                     is = new ObjectInputStream(client.getInputStream()); //create an object inputstream, this is a pretty stupid way of doing it, why not create it once rather than every time around the loop
                     String method = (String) is.readObject();
@@ -451,7 +447,7 @@ public class OrderManager {
         If the trader requested a slice for the new order
     */
     private void sliceOrder(int id, int sliceSize) throws IOException {
-        System.err.println("1798ojlkfdslkjfdslknfds");
+        System.err.println("Entered sliceOrder() in OrderManager");
 
         Order o = orders.get(id);
 
