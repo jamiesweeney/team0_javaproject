@@ -45,10 +45,10 @@ public class Main
 
     
     // _---------------------------HERE
-		Thread a = new Thread(new Screen("Trader James", 2020),"Thread x");
-		a.start();
+//		Thread a = new Thread(new Screen("Trader James", 2020),"Thread x");
+//		a.start();
 //    	new Screen("Trader James", 2020).start();
-//   	 	new Trader("Trader James",2020).start();
+		new Trader("Trader James",2020).start();
     // _---------------------------HERE
 
 		//start order manager
@@ -95,6 +95,8 @@ class MockClient extends Thread
 	 * */
 	public void run()
 	{
+
+		int id;
 		try
 		{
 			PropertyConfigurator.configure("resources/log4j.properties");
@@ -107,13 +109,11 @@ class MockClient extends Thread
 //				client.sendOrder(0, 100, 'D', 8.0f, new Instrument(new Ric("VOD.L")), 1);
 //				client.sendRandomOrder();
 
-				int id=client.sendRandomOrder();
-				id=client.sendRandomOrder();
-				id=client.sendRandomOrder();
-				id=client.sendRandomOrder();
-				id=client.sendRandomOrder();
-				id=client.sendRandomOrder();
-				id=client.sendRandomOrder();
+
+				for (int j = 0; j<500;j++){
+					id=client.sendRandomOrder();
+
+				}
 
 
 
@@ -127,8 +127,14 @@ class MockClient extends Thread
 			}
 			else
 			{
+
+				for (int j = 0; j<500;j++){
+					id=client.sendRandomOrder();
+
+				}
+
 //				client.sendRandomOrder();
-//				client.messageHandler();
+				client.messageHandler();
 			}
 
 		}

@@ -49,7 +49,7 @@ public class Trader extends Thread implements TradeScreen{
 					}
 				}else{
 					//System.out.println("Trader Waiting for data to be available - sleep 1s");
-					Thread.sleep(1000);
+					Thread.sleep(100);
 				}
 			}
 		}
@@ -65,7 +65,7 @@ public class Trader extends Thread implements TradeScreen{
 		//TODO the order should go in a visual grid, but not needed for test purposes
 		//TradeScreen.Screen screen = new TradeScreen.Screen();
 		//screen.newOrder(id, order);
-		Thread.sleep(2134);
+		Thread.sleep(100);
 		orders.put(id, order);
 		acceptOrder(id);
 	}
@@ -90,7 +90,7 @@ public class Trader extends Thread implements TradeScreen{
 	@Override
 	public void price(int id,Order o) throws InterruptedException, IOException {
 		//TODO should update the trade screen
-		Thread.sleep(2134);
+		Thread.sleep(100);
 		//TODO: Remove this int conversion so no info is lost
 		sliceOrder(id,(int) orders.get(id).sizeRemaining()/2);
 	}
