@@ -36,7 +36,7 @@ public class OrderManager {
     public OrderManager(InetSocketAddress[] orderRouters,
                         InetSocketAddress[] clients,
                         InetSocketAddress trader,
-                        LiveMarketData liveMarketData) {
+                        LiveMarketData liveMarketData) throws Exception {
         PropertyConfigurator.configure("resources/log4j.properties");
         OrderManager.liveMarketData = liveMarketData;
 
@@ -48,7 +48,7 @@ public class OrderManager {
         mainLogic();
     }
 
-    private void setup(InetSocketAddress[] orderRouters, InetSocketAddress[] clients, InetSocketAddress trader) {
+    private void setup(InetSocketAddress[] orderRouters, InetSocketAddress[] clients, InetSocketAddress trader) throws Exception {
 
         // Set up trader connection
         this.trader = connect(trader);
@@ -70,20 +70,18 @@ public class OrderManager {
 
 
     // Creates a socket to an address
-    private Socket connect(InetSocketAddress location) {
+    private Socket connect(InetSocketAddress location) throws Exception {
         int tryCounter = 0;
         Socket s = null;
 
         // Try and connect 600 times
         while (tryCounter < 600) {
-            try {
+
                 // Create the socket
                 s = new Socket(location.getHostName(), location.getPort());
                 s.setKeepAlive(true);
                 break;
-            } catch (IOException e) {
-                tryCounter++;
-            }
+
         }
         logger.error("Failed to connect to " + location.toString());
         return s;
@@ -96,7 +94,7 @@ public class OrderManager {
         - Checks router messages
         - Checks trader messages
      */
-    private void mainLogic() {
+    private void mainLogic() throws Exception{
 
         // Constantly check for messages
         while (isRunning) {
@@ -138,10 +136,10 @@ public class OrderManager {
                             int id = is.readInt();
                             Order o = orders.get(id);
                             if (o.routeCode == 0) {
-                                cancelOrder(id);
+                                cancelLocalOrder(id);
                             }
                             if (o.routeCode == 2) {
-                                sendCancel(o, orderRouters[o.routerID]);
+                                sendCancelToRouter(o, orderRouters[o.routerID]);
                             }
                             break;
                         default:
@@ -167,7 +165,7 @@ public class OrderManager {
     private void newOrder(int clientId, int clientOrderId, NewOrderSingle nos) throws IOException {
 
         // Create the new order and add to the order array
-        Order order = new Order(clientId, clientOrderId, nos.instrument, nos.size, nos.side);
+        Order order = new Order(clientId, clientOrderId, nos.instrument, nos.size, nos.side, null);
         orders.put(id, order);
 
         // Send a message to the client
@@ -200,7 +198,7 @@ public class OrderManager {
     /*
         Checks the messages for all routers
     */
-    private void checkRouters() {
+    private void checkRouters() throws Exception {
         int routerId;
         Socket router;
         ObjectInputStream is;
@@ -210,7 +208,6 @@ public class OrderManager {
         for (routerId = 0; routerId < this.orderRouters.length; routerId++) {
             router = this.orderRouters[routerId];
 
-            try {
                 // Check if there is any new data
                 if (0 < router.getInputStream().available()) { //if we have part of a message ready to read, assuming this doesn't fragment messages
 
@@ -231,7 +228,7 @@ public class OrderManager {
                             slice.bestPriceCount += 1;
 
                             if (slice.bestPriceCount == slice.bestPrices.length)
-                                reallyRouteOrder(sliceId, slice);
+                                findBestRouterID(sliceId, slice);
                             break;
                         case "orderCancelled":
                             orderId = is.readInt();
@@ -247,22 +244,13 @@ public class OrderManager {
                     }
                 }
 
-            } catch (IOException e) {
-                // TODO - TEAM 15
-                logger.error("IOException detected: " + e);
-                e.printStackTrace();
-            } catch (ClassNotFoundException e) {
-                // TODO - TEAM 15
-                logger.error("ClassNotFoundException detected: " + e);
-                e.printStackTrace();
-            }
         }
     }
 
     /*
         Sends a order slice to the router and best price
     */
-    private void reallyRouteOrder(int sliceId, Order o) throws IOException {
+    private void findBestRouterID(int sliceId, Order o) throws IOException {
 
 
         // Iterate over prices and find minimum
@@ -277,7 +265,7 @@ public class OrderManager {
         }
         ObjectOutputStream os = new ObjectOutputStream(orderRouters[o.routerID].getOutputStream());
         os.writeObject(Router.api.routeOrder);
-        os.writeInt((int) o.id);
+        os.writeInt((int) o.uniqueOrderID);
         os.writeInt(sliceId);
         os.writeInt((int) o.sizeRemaining());
         os.writeObject(o.instrument);
@@ -301,10 +289,8 @@ public class OrderManager {
     /*
         Checks the messages for the trader
     */
-    private void checkTrader() {
+    private void checkTrader() throws Exception {
         ObjectInputStream is;
-
-        try {
             // If there is any messages from the trader
             if (0 < this.trader.getInputStream().available()) {
                 is = new ObjectInputStream(this.trader.getInputStream());
@@ -322,15 +308,6 @@ public class OrderManager {
                         sliceOrder(is.readInt(), is.readInt());
                 }
             }
-        } catch (IOException e) {
-            // TODO - TEAM 15
-            logger.error("IOException detected: " + e);
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            // TODO - TEAM 15
-            logger.error("ClassNotFoundException detected: " + e);
-            e.printStackTrace();
-        }
     }
 
     /*
@@ -429,7 +406,6 @@ public class OrderManager {
                 continue;
             }
 
-            //TODO add support here and in Order for limit orders
 
             // If everything passed, cross the orders
             int sizeBefore = (int) o.sizeRemaining();
@@ -472,7 +448,7 @@ public class OrderManager {
     }
 
 
-    private void cancelOrder(int orderID) {
+    private void cancelLocalOrder(int orderID) {
         Order o = orders.get(orderID);
         try {
             ObjectOutputStream os = new ObjectOutputStream(clients[(int) o.clientid].getOutputStream());
@@ -487,14 +463,13 @@ public class OrderManager {
                 generateMessage(os, (int)o.clientOrderID, '8', '9', o.side);
                 os.flush();
             } else {
-                int rmvdContent = 0;
-                int filledCount = 0;
+
                 for (Order slice : o.slices) {
                     if (slice.OrdStatus == '2') {
-                        filledCount++;
+
                     } else if (slice.OrdStatus == '0') {
                         o.slices.remove(slice);
-                        rmvdContent++;
+
                     }
                 }
                 generateMessage(os, (int)o.clientOrderID, '4', 'F', o.side);
@@ -506,7 +481,7 @@ public class OrderManager {
     }
 
 
-    private void sendCancel(Order order, Socket routerSocket) {
+    private void sendCancelToRouter(Order order, Socket routerSocket) {
 //        orderRouter.sendCancel(order);
 //        order.orderRouter.writeObject(order);
         try {
@@ -514,7 +489,7 @@ public class OrderManager {
             os = new ObjectOutputStream(routerSocket.getOutputStream());
             for (int i = 0; i < order.slices.size(); i++) {
                 os.writeObject(Router.api.sendCancel);
-                os.writeInt((int)order.id);
+                os.writeInt((int)order.uniqueOrderID);
                 os.writeInt(i);
                 os.writeObject(order.instrument);
                 //os.writeInt((int) order.sizeRemaining());

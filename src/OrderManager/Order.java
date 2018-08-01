@@ -2,6 +2,7 @@ package OrderManager;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import Ref.Instrument;
 
@@ -18,27 +19,32 @@ public class Order implements Serializable {
     long size;
     int side;
     ArrayList<Fill> fills;
+    ArrayList<Long> sliceIDs;
     ArrayList<Order> slices;
+    long parentOID;
 
-    public long id;
+    public long uniqueOrderID;
     double[] bestPrices;
     long bestPriceCount;
-    //    long orderRouter; TODO - Do we need this?
-    //    Status state;
+
+
 
     public double initialMarketPrice;
     char OrdStatus = 'A'; //OrdStatus is Fix 39, 'A' is 'Pending New'
 
 
     // Constructor
-    public Order(long clientId, long ClientOrderID, Instrument instrument, int size, int side) {
+    public Order(long clientId, long ClientOrderID, Instrument instrument, int size, int side, Long pid) {
         this.clientOrderID = ClientOrderID;
         this.size = size;
         this.clientid = clientId;
         this.instrument = instrument;
         this.side=side;
         fills = new ArrayList<Fill>();
-        slices = new ArrayList<Order>();
+        sliceIDs = new ArrayList<>();
+        if (pid != null) {
+            parentOID = pid;
+        }
     }
 
 
@@ -53,7 +59,7 @@ public class Order implements Serializable {
 
     // Adds a new to the slice array, returns the slice index
     public int newSlice(int sliceSize) {
-        slices.add(new Order(id, clientOrderID, instrument, sliceSize, side));
+        slices.add(new Order(clientOrderID, clientOrderID, instrument, sliceSize, side, this.uniqueOrderID));
         return slices.size() - 1;
     }
 
@@ -75,15 +81,20 @@ public class Order implements Serializable {
     }
 
 
-
+    /*currently returns average price of filled orders
+    meant to return average price of all orders?
+    now refactored to do so*/
     float price() {
-        //TODO this is buggy as it doesn't take account of slices. Let them fix it
         float sum = 0;
         for (Fill fill : fills) {
             sum += fill.price;
         }
-        return sum / fills.size();
+        for (Order slice : slices) {
+            sum += slice.price();
+        }
+        return sum / (fills.size() + slices.size()); //average price of all orders
     }
+
 
     // Makes a new fill
     void createFill(long size, double price) {
@@ -95,12 +106,13 @@ public class Order implements Serializable {
         }
     }
 
-    //
+    //TODO: write a cancellation function in here? or just continue doing as is?
+
     void cross(Order matchingOrder) {
         //pair slices first and then parent
         for (Order slice : slices) {
             if (slice.sizeRemaining() == 0) continue;
-            //TODO could optimise this to not start at the beginning every time
+            //TODO could optimise this to not start at the beginning every time <david note> look into class optimisation after refactoring
             for (Order matchingSlice : matchingOrder.slices) {
                 long msze = matchingSlice.sizeRemaining();
                 if (msze == 0) continue;
@@ -110,7 +122,6 @@ public class Order implements Serializable {
                     matchingSlice.createFill(sze, initialMarketPrice);
                     break;
                 }
-                //sze>msze
                 slice.createFill(msze, initialMarketPrice);
                 matchingSlice.createFill(msze, initialMarketPrice);
             }
@@ -138,7 +149,6 @@ public class Order implements Serializable {
                     matchingSlice.createFill(sze, initialMarketPrice);
                     break;
                 }
-                //sze>msze
                 createFill(msze, initialMarketPrice);
                 matchingSlice.createFill(msze, initialMarketPrice);
             }
@@ -155,18 +165,12 @@ public class Order implements Serializable {
             }
         }
     }
-
-
-    // TODO - add functionality
-    void cancel() {
-        //state=cancelled
-    }
 }
 
-class Basket
-{
-    Order[] orders;
-}
+//class Basket
+//{
+//    Order[] orders;
+//}
 
 class Fill implements Serializable
 {

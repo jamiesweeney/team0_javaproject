@@ -12,7 +12,7 @@ import OrderManager.OrderManager;
 
 public class Main
 {
-	public static void main(String[] args) throws IOException
+	public static void main(String[] args)
 	{
 		//Create main logging object.
 		Logger logger = Logger.getLogger(Main.class);
@@ -129,6 +129,12 @@ class MockOM extends Thread
 		PropertyConfigurator.configure("resources/log4j.properties");
 
 		//In order to debug constructors you can do F5 F7 F5
-		new OrderManager(routers,clients,trader,liveMarketData);
+
+		try {
+			new OrderManager(routers,clients,trader,liveMarketData);
+		} catch (Exception e) {
+			ExceptionCatcher catcher = new ExceptionCatcher();
+			catcher.displayException(e);
+		}
 	}
 }
